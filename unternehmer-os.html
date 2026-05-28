@@ -4921,23 +4921,40 @@ refreshKatSelects();
 // Auto-refresh today blocks every minute
 setInterval(()=>{ renderTodayBlocks(); renderBlocks(); }, 60000);
 
+// Restore timer if it was running when browser closed
+function restoreTimerIfRunning() {
+  const t = S.stundenlohn?.timer;
+  if(t?.start && t?.kat) {
+    clearInterval(slTimerInterval);
+    slTimerInterval = setInterval(slTickTimer, 1000);
+    slTickTimer();
+    // Show indicator in nav
+    const navItem = [...document.querySelectorAll('.nav-item')].find(n=>n.getAttribute('onclick')===`sw('stundenlohn')`);
+    if(navItem && !navItem.querySelector('.timer-dot')) {
+      const dot = document.createElement('span');
+      dot.className = 'timer-dot';
+      dot.style.cssText = 'width:7px;height:7px;border-radius:50%;background:var(--accent);display:inline-block;margin-left:6px;animation:pulse 1s infinite';
+      navItem.appendChild(dot);
+    }
+  }
+}
+
 // Load from Supabase on startup
 (async () => {
   const loaded = await supabaseLoad();
   if (loaded) {
-    // Re-render everything with cloud data
     renderToday(); renderBlocks(); renderHabits(); renderOKR();
-    renderSchlaf(); renderStundenlohn(); renderNotizen(); renderTracker();
+    renderSchlaf(); renderNotizen(); renderTracker();
     renderRecurring(); refreshKatSelects();
     updateSyncStatus('synced');
     lastSyncTime = new Date();
   } else {
-    // Upload local data to cloud if cloud is empty
     if (Object.keys(S).length > 5) {
       await supabaseSave(S);
     }
     updateSyncStatus('synced');
   }
+  restoreTimerIfRunning();
 })();
 </script>
 </body>
