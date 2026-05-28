@@ -327,20 +327,22 @@ textarea{resize:vertical;line-height:1.6}
 
     <div class="nav-section">Fokus</div>
     <div class="nav-item active" onclick="sw('today')"><span class="icon">🎯</span> Heute</div>
-    <div class="nav-item" onclick="sw('blocks')"><span class="icon">⏱</span> Zeitblöcke</div>
-    <div class="nav-item" onclick="sw('pomo')"><span class="icon">🍅</span> Pomodoro</div>
+    <div class="nav-item" onclick="sw('blocks')"><span class="icon">⏱</span> Zeitblöcke & Fokus</div>
+    <div class="nav-item" onclick="sw('recurring')"><span class="icon">🔁</span> Wiederkehrende</div>
+
+    <div class="nav-section">Business</div>
+    <div class="nav-item" onclick="sw('tracker')"><span class="icon">💰</span> Finanzen & Zahlen</div>
+    <div class="nav-item" onclick="sw('okr')"><span class="icon">🏆</span> Ziele</div>
 
     <div class="nav-section">Wachstum</div>
-    <div class="nav-item" onclick="sw('okr')"><span class="icon">🏆</span> Ziel-System</div>
     <div class="nav-item" onclick="sw('habits')"><span class="icon">🔥</span> Habits</div>
     <div class="nav-item" onclick="sw('schlaf')"><span class="icon">🌙</span> Schlaf & Routine</div>
-    <div class="nav-section">Finanzen & Zeit</div>
-    <div class="nav-item" onclick="sw('stundenlohn')"><span class="icon">💶</span> Stundenlohn</div>
-    <div class="nav-section">Denken & Planen</div>
-    <div class="nav-item" onclick="sw('recurring')"><span class="icon">🔁</span> Wiederkehrende</div>
+
+    <div class="nav-section">Denken</div>
     <div class="nav-item" onclick="sw('notizen')"><span class="icon">🗂</span> Notizen & Ideen</div>
+
     <div class="nav-section">Review</div>
-    <div class="nav-item" onclick="sw('tracker')"><span class="icon">📈</span> Umsatz & Gewinn</div>
+    <div class="nav-item" onclick="sw('stundenlohn')"><span class="icon">💶</span> Stundenlohn</div>
     <div class="nav-item" onclick="sw('review')"><span class="icon">📋</span> Wochenreview</div>
 
     <div class="sidebar-bottom">
@@ -439,19 +441,11 @@ textarea{resize:vertical;line-height:1.6}
         <div id="today-blocks-list"></div>
         <div style="font-size:12px;color:var(--muted);margin-top:.5rem">→ <span style="color:var(--text);cursor:pointer;text-decoration:underline" onclick="sw('blocks')">Zeitblöcke verwalten</span></div>
       </div>
-
-      <div style="margin-top:1.5rem">
-        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:.625rem">
-          <div class="card-title" style="margin:0">Ziele auf einen Blick</div>
-          <span style="font-size:12px;color:var(--muted);cursor:pointer;text-decoration:underline" onclick="sw('okr')">Alle Ziele →</span>
-        </div>
-        <div class="ziel-overview-grid" id="today-ziel-overview"></div>
-      </div>
     </div>
 
     <!-- ZEITBLÖCKE -->
     <div id="v-blocks" class="view">
-      <div class="page-title">Zeitblöcke</div>
+      <div class="page-title">Zeitblöcke & Fokus</div>
       <div class="page-sub">Schütze Deep Work, Sport und Erholung durch feste Blöcke.</div>
       <div class="tip"><strong>Time Blocking (Cal Newport):</strong> Plane jeden Stunden im Voraus. Unternehmer ohne feste Blöcke arbeiten reaktiv – du arbeitest proaktiv. Feste End-Zeiten erzwingen Fokus.</div>
 
@@ -498,18 +492,17 @@ textarea{resize:vertical;line-height:1.6}
         <div class="card-title">Vorlagen</div>
         <div id="tpl-list"></div>
       </div>
-    </div>
 
-    <!-- POMODORO -->
-    <div id="v-pomo" class="view">
-      <div class="page-title">Pomodoro-Timer</div>
-      <div class="page-sub">Fokussiere dich in Blöcken. Hartes Ende = volle Energie bis zum Schluss.</div>
+      <!-- POMODORO EINGEBETTET -->
+      <div style="margin-top:1.5rem">
+        <div class="card-title" style="font-size:16px;font-weight:600;margin-bottom:.25rem">🍅 Pomodoro-Timer</div>
+        <div style="font-size:12px;color:var(--muted);margin-bottom:1rem">Fokussiere dich in Blöcken. Hartes Ende = volle Energie bis zum Schluss.</div>
 
-      <div class="card">
-        <div class="pomo-center">
-          <div class="pomo-phase" id="pomo-phase">BEREIT</div>
-          <div class="pomo-timer work" id="pomo-display">25:00</div>
-          <div class="pomo-task-info" id="pomo-task-info">Wähle eine Aufgabe und starte</div>
+        <div class="card">
+          <div class="pomo-center">
+            <div class="pomo-phase" id="pomo-phase">BEREIT</div>
+            <div class="pomo-timer work" id="pomo-display">25:00</div>
+            <div class="pomo-task-info" id="pomo-task-info">Wähle eine Aufgabe und starte</div>
           <div class="pomo-dots" id="pomo-dots"></div>
           <div class="pomo-btns">
             <button class="btn btn-accent" id="pomo-start-btn" onclick="pomoToggle()">▶ Starten</button>
@@ -542,7 +535,8 @@ textarea{resize:vertical;line-height:1.6}
         <div class="card-title">Heutige Pomodoros</div>
         <div id="pomo-log" style="font-size:13px;color:var(--muted)">Noch keine Pomodoros heute.</div>
       </div>
-    </div>
+      </div><!-- end pomo card -->
+    </div><!-- end v-blocks -->
 
     <!-- HABITS -->
     <div id="v-habits" class="view">
@@ -790,7 +784,7 @@ textarea{resize:vertical;line-height:1.6}
         <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:flex-end">
           <div>
             <label class="sl-label">Monat</label>
-            <select id="sl-monat" style="width:110px">
+            <select id="sl-monat" style="width:110px" onchange="slAutoFillGewinn()">
               <option value="1">Januar</option><option value="2">Februar</option>
               <option value="3">März</option><option value="4">April</option>
               <option value="5">Mai</option><option value="6">Juni</option>
@@ -801,11 +795,11 @@ textarea{resize:vertical;line-height:1.6}
           </div>
           <div>
             <label class="sl-label">Jahr</label>
-            <input type="number" id="sl-jahr" value="2026" min="2020" max="2035" style="width:80px">
+            <input type="number" id="sl-jahr" value="2026" min="2020" max="2035" style="width:80px" onchange="slAutoFillGewinn()">
           </div>
           <div style="flex:1;min-width:130px">
-            <label class="sl-label">Gewinn aus Sellerboard / BWA (€)</label>
-            <input type="number" id="sl-gewinn" placeholder="z.B. 8500" min="0" step="0.01" style="width:100%">
+            <label class="sl-label">Gewinn (€) <span style="font-size:10px;color:var(--accent)">↻ auto aus Finanzen</span></label>
+            <input type="number" id="sl-gewinn" placeholder="wird automatisch befüllt" min="0" step="0.01" style="width:100%">
           </div>
           <div style="min-width:110px">
             <label class="sl-label">Arbeitsstunden gesamt</label>
@@ -968,11 +962,11 @@ textarea{resize:vertical;line-height:1.6}
 
     <!-- UMSATZ & GEWINN TRACKER -->
     <div id="v-tracker" class="view">
-      <div class="page-title">Umsatz & Gewinn Tracker</div>
-      <div class="page-sub">Wöchentlich eintragen – sofort sehen ob du auf Kurs bist.</div>
+      <div class="page-title">Finanzen & Zahlen</div>
+      <div class="page-sub">Umsatz, Gewinn & Einkaufsvolumen – deine Etappenziele.</div>
 
       <!-- TABS -->
-      <div style="display:flex;gap:4px;border-bottom:1px solid var(--border);margin-bottom:1.25rem">
+      <div style="display:flex;gap:4px;border-bottom:1px solid var(--border);margin-bottom:1.25rem;flex-wrap:wrap">
         <button class="n-tab active" data-t="umsatz" onclick="switchTrTab('umsatz')">💰 Umsatz & Gewinn</button>
         <button class="n-tab" data-t="einkauf" onclick="switchTrTab('einkauf')">🛒 Einkaufsvolumen</button>
       </div>
@@ -1262,9 +1256,18 @@ textarea{resize:vertical;line-height:1.6}
           <div id="ek-verlauf-list"></div>
         </div>
       </div>
-    </div>
 
-    <!-- WIEDERKEHRENDE AUFGABEN -->
+      <!-- STUNDENLOHN TAB (eingebettet) -->
+      <div id="tr-tab-stundenlohn" class="tr-tabview" style="display:none">
+        <div id="stundenlohn-inner"></div>
+      </div>
+
+      <!-- WIEDERKEHRENDE TAB (eingebettet) -->
+      <div id="tr-tab-wiederkehrend" class="tr-tabview" style="display:none">
+        <div id="wiederkehrend-inner"></div>
+      </div>
+
+    </div><!-- end v-tracker -->
     <div id="v-recurring" class="view">
       <div class="page-title">Wiederkehrende Aufgaben</div>
       <div class="page-sub">Einmal anlegen – immer verfügbar. Erscheinen je nach Rhythmus auf dem Heute-Tab.</div>
@@ -1579,16 +1582,17 @@ function uid() { return Date.now() + Math.random().toString(36).slice(2); }
 function sw(id) {
   document.querySelectorAll('.view').forEach(v=>v.classList.toggle('active', v.id==='v-'+id));
   document.querySelectorAll('.nav-item').forEach(n=>n.classList.toggle('active', n.getAttribute('onclick')===`sw('${id}')`));
-  if(id==='today') renderToday();
-  if(id==='blocks') renderBlocks();
-  if(id==='habits') renderHabits();
-  if(id==='okr') renderOKR();
-  if(id==='sync') { /* sync view just renders static */ }
-  if(id==='recurring') renderRecurring();
-  if(id==='stundenlohn') renderStundenlohn();
-  if(id==='tracker') renderTracker();
-  if(id==='schlaf') renderSchlaf();
-  if(id==='pomo') renderPomoLog();
+  if(id==='today')      { renderToday(); }
+  if(id==='blocks')     { renderBlocks(); renderPomoDisplay(); renderPomoLog(); }
+  if(id==='recurring')  { renderRecurring(); }
+  if(id==='habits')     { renderHabits(); }
+  if(id==='okr')        { renderOKR(); }
+  if(id==='tracker')    { renderTracker(); renderEkMonat(); renderTrMonat(); }
+  if(id==='schlaf')     { renderSchlaf(); }
+  if(id==='notizen')    { renderNotizen(); }
+  if(id==='stundenlohn'){ renderStundenlohn(); }
+  if(id==='review')     { renderReview(); }
+  if(id==='sync')       { /* static */ }
 }
 
 // ─── CLOCK ───────────────────────────────────────
@@ -1876,7 +1880,7 @@ function renderTodayBlocks() {
   }).join('');
 }
 
-function renderToday() { renderMITs(); renderTodayBlocks(); renderTodayOKR(); renderYesterdayTodos(); renderWVToday(); }
+function renderToday() { renderMITs(); renderTodayBlocks(); renderYesterdayTodos(); renderWVToday(); }
 
 function renderWVToday() {
   const today = new Date();
@@ -2678,6 +2682,27 @@ function avgNettoStundenlohn() {
   return rates.reduce((a,b)=>a+b,0)/rates.length;
 }
 
+function slAutoFillGewinn() {
+  const monat = parseInt(document.getElementById('sl-monat')?.value);
+  const jahr  = parseInt(document.getElementById('sl-jahr')?.value) || new Date().getFullYear();
+  const mk    = `${jahr}-${String(monat).padStart(2,'0')}`;
+  // Sum Gewinn from tracker wochen for this month
+  const wochen = (S.tracker?.wochen||[]).filter(w=>{
+    const d = w.von ? new Date(w.von) : (w.ts ? new Date(w.ts) : null);
+    return d && d.getFullYear()===jahr && d.getMonth()+1===monat;
+  });
+  const totalG = wochen.reduce((s,w)=>s+w.gewinn,0);
+  // Also check monatsziele
+  const mzG = S.tracker?.monatsziele?.[mk]?.gewinn || 0;
+  const gewinn = totalG > 0 ? totalG : mzG;
+  const el = document.getElementById('sl-gewinn');
+  if(el && gewinn > 0) {
+    el.value = Math.round(gewinn);
+    el.style.background = 'rgba(212,240,60,.08)';
+    notify(`✅ Gewinn ${fmtE(gewinn)} aus Finanzen übernommen`);
+  }
+}
+
 function addMonat() {
   const monat   = parseInt(document.getElementById('sl-monat').value);
   const jahr    = parseInt(document.getElementById('sl-jahr').value)||2026;
@@ -2844,6 +2869,8 @@ function renderStundenlohn() {
   const jahrEl  = document.getElementById('sl-jahr');
   if(monatEl && !monatEl.dataset.set) { monatEl.value=now.getMonth()+1; monatEl.dataset.set='1'; }
   if(jahrEl  && !jahrEl.dataset.set)  { jahrEl.value=now.getFullYear(); jahrEl.dataset.set='1'; }
+  // Auto-fill Gewinn from tracker
+  setTimeout(slAutoFillGewinn, 100);
   renderSLSummary();
   renderSLMonatList();
   renderSLTasks();
@@ -3340,7 +3367,10 @@ let activeTrTab = 'umsatz';
 
 function switchTrTab(t) {
   activeTrTab = t;
-  document.querySelectorAll('.n-tab[data-t]').forEach(b=>{ if(['umsatz','einkauf'].includes(b.dataset.t)) b.classList.toggle('active', b.dataset.t===t); });
+  document.querySelectorAll('.n-tab[data-t]').forEach(b=>{
+    if(['umsatz','einkauf'].includes(b.dataset.t))
+      b.classList.toggle('active', b.dataset.t===t);
+  });
   document.querySelectorAll('.tr-tabview').forEach(v=>v.style.display='none');
   document.getElementById('tr-tab-'+t).style.display='block';
 }
