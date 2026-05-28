@@ -342,7 +342,7 @@ textarea{resize:vertical;line-height:1.6}
     <div class="nav-item" onclick="sw('notizen')"><span class="icon">🗂</span> Notizen & Ideen</div>
 
     <div class="nav-section">Review</div>
-    <div class="nav-item" onclick="sw('stundenlohn')"><span class="icon">💶</span> Stundenlohn</div>
+    <div class="nav-item" onclick="sw('stundenlohn')"><span class="icon">⏱</span> Zeittracking</div>
     <div class="nav-item" onclick="sw('review')"><span class="icon">📋</span> Wochenreview</div>
 
     <div class="sidebar-bottom">
@@ -761,100 +761,150 @@ textarea{resize:vertical;line-height:1.6}
 
     <!-- STUNDENLOHN -->
     <div id="v-stundenlohn" class="view">
-      <div class="page-title">Stundenlohn-Rechner</div>
-      <div class="page-sub">Trage deinen monatlichen Gewinn und deine Arbeitsstunden ein – sieh was du wirklich verdienst.</div>
-      <div class="tip"><strong>Warum das wichtig ist:</strong> Viele Unternehmer arbeiten 60h/Woche und verdienen netto weniger als ein Angestellter. Erst wenn du deinen echten Stundenlohn kennst, kannst du entscheiden was du delegierst, automatisierst oder streichst.</div>
+      <div class="page-title">Zeittracking</div>
+      <div class="page-sub">Tracke täglich was du wofür arbeitest – sieh Ende des Monats wo deine Zeit wirklich hinfließt.</div>
 
-      <!-- STEUER EINSTELLUNG -->
-      <div class="card" style="margin-bottom:1rem">
-        <div style="display:flex;gap:1rem;align-items:flex-end;flex-wrap:wrap">
-          <div style="flex:1;min-width:160px">
-            <label class="sl-label">Steuersatz % (einmalig hinterlegen)</label>
-            <input type="number" id="sl-steuer" value="30" min="0" max="60" style="width:100%" oninput="saveSteuer()">
+      <!-- TABS -->
+      <div style="display:flex;gap:4px;border-bottom:1px solid var(--border);margin-bottom:1.25rem">
+        <button class="n-tab active" data-st="tracker" onclick="switchSLTab('tracker')">⏱ Zeittracking</button>
+        <button class="n-tab" data-st="auswertung" onclick="switchSLTab('auswertung')">📊 Monatsauswertung</button>
+        <button class="n-tab" data-st="stundenlohn" onclick="switchSLTab('stundenlohn')">💶 Stundenlohn</button>
+      </div>
+
+      <!-- TAB: ZEITTRACKING -->
+      <div id="sl-tab-tracker" class="sl-tabview">
+
+        <!-- AKTIVER TIMER -->
+        <div class="card" style="margin-bottom:1rem" id="sl-timer-card">
+          <div class="card-title">Aktuelle Aktivität</div>
+          <div id="sl-timer-display" style="font-size:36px;font-weight:700;font-family:'DM Mono',monospace;color:var(--accent);margin:.5rem 0">00:00:00</div>
+          <div id="sl-timer-kat" style="font-size:13px;color:var(--muted);margin-bottom:.75rem">Kein Timer läuft</div>
+          <button id="sl-stop-btn" onclick="slStopTimer()" style="display:none" class="btn btn-accent">⏹ Stoppen & Speichern</button>
+        </div>
+
+        <!-- KATEGORIEN -->
+        <div class="card" style="margin-bottom:1rem">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:.75rem">
+            <div class="card-title" style="margin:0">Kategorien – Klicken zum Starten</div>
+            <button onclick="slAddKat()" style="background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius-sm);padding:4px 10px;font-size:12px;color:var(--muted);cursor:pointer">+ Neu</button>
           </div>
-          <div style="flex:2;min-width:200px">
-            <label class="sl-label" style="color:var(--hint)">Tipp: Einkommensteuer + Solidaritätszuschlag ca. 25–45% je nach Gewinn. Im Zweifel deinen Steuerberater fragen.</label>
+          <div id="sl-kat-grid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:8px"></div>
+        </div>
+
+        <!-- MANUELLE EINGABE -->
+        <div class="card" style="margin-bottom:1rem">
+          <div class="card-title">Manuell eintragen</div>
+          <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:flex-end">
+            <div>
+              <label class="sl-label">Datum</label>
+              <input type="date" id="sl-man-datum" style="width:150px">
+            </div>
+            <div>
+              <label class="sl-label">Kategorie</label>
+              <select id="sl-man-kat" style="width:150px"></select>
+            </div>
+            <div>
+              <label class="sl-label">Stunden</label>
+              <input type="number" id="sl-man-h" placeholder="z.B. 2.5" min="0" max="24" step="0.5" style="width:90px">
+            </div>
+            <div>
+              <label class="sl-label">Notiz</label>
+              <input type="text" id="sl-man-notiz" placeholder="optional..." style="width:150px">
+            </div>
+            <button class="btn btn-accent" onclick="slManualAdd()">+ Eintragen</button>
           </div>
+        </div>
+
+        <!-- TAGES-VERLAUF -->
+        <div class="card">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:.75rem">
+            <div class="card-title" style="margin:0">Tagesverlauf – <span id="sl-tag-monat-label">aktueller Monat</span></div>
+            <div style="display:flex;gap:6px">
+              <button onclick="slTagMonatPrev()" style="background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius-sm);padding:4px 10px;color:var(--muted);cursor:pointer">‹</button>
+              <button onclick="slTagMonatNext()" style="background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius-sm);padding:4px 10px;color:var(--muted);cursor:pointer">›</button>
+            </div>
+          </div>
+          <div id="sl-tag-list"></div>
         </div>
       </div>
 
-      <!-- MONATS-EINGABE -->
-      <div class="card" style="margin-bottom:1rem">
-        <div class="card-title">Monat eintragen</div>
-        <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:flex-end">
-          <div>
-            <label class="sl-label">Monat</label>
-            <select id="sl-monat" style="width:110px" onchange="slAutoFillGewinn()">
-              <option value="1">Januar</option><option value="2">Februar</option>
-              <option value="3">März</option><option value="4">April</option>
-              <option value="5">Mai</option><option value="6">Juni</option>
-              <option value="7">Juli</option><option value="8">August</option>
-              <option value="9">September</option><option value="10">Oktober</option>
-              <option value="11">November</option><option value="12">Dezember</option>
-            </select>
+      <!-- TAB: MONATSAUSWERTUNG -->
+      <div id="sl-tab-auswertung" class="sl-tabview" style="display:none">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem;flex-wrap:wrap;gap:8px">
+          <div style="display:flex;gap:6px;align-items:center">
+            <button onclick="slAuswMonatPrev()" style="background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius-sm);padding:4px 10px;color:var(--muted);cursor:pointer">‹</button>
+            <span id="sl-aus-label" style="font-size:14px;font-weight:600;min-width:120px;text-align:center"></span>
+            <button onclick="slAuswMonatNext()" style="background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius-sm);padding:4px 10px;color:var(--muted);cursor:pointer">›</button>
           </div>
-          <div>
-            <label class="sl-label">Jahr</label>
-            <input type="number" id="sl-jahr" value="2026" min="2020" max="2035" style="width:80px" onchange="slAutoFillGewinn()">
-          </div>
-          <div style="flex:1;min-width:130px">
-            <label class="sl-label">Gewinn (€) <span style="font-size:10px;color:var(--accent)">↻ auto aus Finanzen</span></label>
-            <input type="number" id="sl-gewinn" placeholder="wird automatisch befüllt" min="0" step="0.01" style="width:100%">
-          </div>
-          <div style="min-width:110px">
-            <label class="sl-label">Arbeitsstunden gesamt</label>
-            <input type="number" id="sl-arbeit-h" placeholder="z.B. 120" min="0" step="0.5" style="width:100%">
-          </div>
-          <div style="min-width:120px">
-            <label class="sl-label">Notiz (optional)</label>
-            <input type="text" id="sl-notiz" placeholder="z.B. starker Monat..." style="width:100%">
-          </div>
-          <button class="btn btn-accent" onclick="addMonat()">+ Eintragen</button>
+          <button onclick="slExport()" class="btn btn-accent">⬇️ Export für Claude</button>
         </div>
+        <div id="sl-aus-content"></div>
       </div>
 
-      <!-- ÜBERSICHT -->
-      <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:1rem" id="sl-summary-grid">
-        <div class="stat-box"><div class="lbl">Ø Stundenlohn netto</div><div class="val" id="sl-avg-netto">–</div></div>
-        <div class="stat-box"><div class="lbl">Ø Stundenlohn brutto</div><div class="val" id="sl-avg-brutto">–</div></div>
-        <div class="stat-box"><div class="lbl">Bester Monat</div><div class="val" id="sl-best">–</div></div>
-        <div class="stat-box"><div class="lbl">Ø Arbeitsstunden/Mo</div><div class="val" id="sl-avg-h">–</div></div>
-      </div>
+      <!-- TAB: STUNDENLOHN -->
+      <div id="sl-tab-stundenlohn" class="sl-tabview" style="display:none">
 
-      <!-- MONATSVERLAUF -->
-      <div class="card" style="margin-bottom:1rem">
-        <div class="card-title">Monatsverlauf</div>
-        <div id="sl-monat-list"></div>
-      </div>
-
-      <!-- ABLENKUNGSKOSTEN -->
-      <div class="card" style="margin-bottom:1rem">
-        <div class="card-title">Was kostet dich Ablenkung? (basierend auf Ø Stundenlohn)</div>
-        <div id="sl-impact-grid" style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px">
-          <div style="text-align:center;color:var(--muted);font-size:13px;grid-column:1/-1;padding:.5rem">Trage mindestens einen Monat ein.</div>
+        <!-- STEUER -->
+        <div class="card" style="margin-bottom:1rem">
+          <div style="display:flex;gap:1rem;align-items:flex-end;flex-wrap:wrap">
+            <div>
+              <label class="sl-label">Steuersatz %</label>
+              <input type="number" id="sl-steuer" value="30" min="0" max="60" style="width:100px" oninput="saveSteuer()">
+            </div>
+            <div style="font-size:12px;color:var(--hint)">Einkommensteuer + Soli ca. 25–45% je nach Gewinn.</div>
+          </div>
         </div>
-      </div>
 
-      <!-- AUFGABEN BEWERTEN -->
-      <div class="card" style="margin-bottom:1rem">
-        <div class="card-title">Aufgaben bewerten – lohnt sich das für meinen Stundenlohn?</div>
-        <div style="font-size:12px;color:var(--muted);margin-bottom:.875rem">Delegieren oder automatisieren was unter deinem Stundenwert liegt.</div>
-        <div id="sl-aufgaben-list" style="margin-bottom:.75rem"></div>
-        <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
-          <input type="text" id="sl-task-input" placeholder="Aufgabe (z.B. Buchhaltung, E-Mails...)" style="flex:1;min-width:180px">
-          <input type="number" id="sl-task-minuten" placeholder="Min/Tag" style="width:90px" min="1">
-          <button class="btn btn-accent btn-sm" onclick="addSLTask()">+ Bewerten</button>
+        <!-- MONATSGEWINN -->
+        <div class="card" style="margin-bottom:1rem">
+          <div class="card-title">Monatsgewinn hinterlegen <span style="font-size:11px;color:var(--muted);font-weight:400">(auto aus Finanzen gezogen)</span></div>
+          <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:flex-end">
+            <div>
+              <label class="sl-label">Monat</label>
+              <select id="sl-monat" style="width:110px" onchange="slAutoFillGewinn()">
+                <option value="1">Januar</option><option value="2">Februar</option>
+                <option value="3">März</option><option value="4">April</option>
+                <option value="5">Mai</option><option value="6">Juni</option>
+                <option value="7">Juli</option><option value="8">August</option>
+                <option value="9">September</option><option value="10">Oktober</option>
+                <option value="11">November</option><option value="12">Dezember</option>
+              </select>
+            </div>
+            <div>
+              <label class="sl-label">Jahr</label>
+              <input type="number" id="sl-jahr" value="2026" min="2020" max="2035" style="width:80px" onchange="slAutoFillGewinn()">
+            </div>
+            <div style="flex:1;min-width:130px">
+              <label class="sl-label">Gewinn (€) <span style="font-size:10px;color:var(--accent)">↻ auto</span></label>
+              <input type="number" id="sl-gewinn" placeholder="auto befüllt" min="0" step="0.01" style="width:100%">
+            </div>
+            <button class="btn btn-accent" onclick="addMonat()">Speichern</button>
+          </div>
         </div>
-      </div>
 
-      <!-- SCHNELLRECHNER -->
-      <div class="card">
-        <div class="card-title">Schnellrechner</div>
-        <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
-          <input type="number" id="sl-quick-min" placeholder="Minuten" style="width:110px" min="1" oninput="calcQuick()">
-          <span style="color:var(--muted);font-size:13px">Minuten =</span>
-          <span id="sl-quick-result" style="font-size:22px;font-weight:600;font-family:'DM Mono',monospace;color:var(--accent)">–</span>
-          <span style="color:var(--muted);font-size:13px">€ netto</span>
+        <!-- ÜBERSICHT -->
+        <div style="display:grid;grid-template-columns:repeat(2,1fr);gap:10px;margin-bottom:1rem">
+          <div class="stat-box"><div class="lbl">Ø Stundenlohn netto</div><div class="val" id="sl-avg-netto">–</div></div>
+          <div class="stat-box"><div class="lbl">Ø Stundenlohn brutto</div><div class="val" id="sl-avg-brutto">–</div></div>
+          <div class="stat-box"><div class="lbl">Bester Monat</div><div class="val" id="sl-best">–</div></div>
+          <div class="stat-box"><div class="lbl">Ø Arbeitsstunden/Mo</div><div class="val" id="sl-avg-h">–</div></div>
+        </div>
+
+        <!-- MONATSVERLAUF -->
+        <div class="card" style="margin-bottom:1rem">
+          <div class="card-title">Monatsverlauf</div>
+          <div id="sl-monat-list"></div>
+        </div>
+
+        <!-- SCHNELLRECHNER -->
+        <div class="card">
+          <div class="card-title">Schnellrechner</div>
+          <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
+            <input type="number" id="sl-quick-min" placeholder="Minuten" style="width:110px" min="1" oninput="calcQuick()">
+            <span style="color:var(--muted);font-size:13px">Minuten =</span>
+            <span id="sl-quick-result" style="font-size:22px;font-weight:600;font-family:'DM Mono',monospace;color:var(--accent)">–</span>
+            <span style="color:var(--muted);font-size:13px">€ netto</span>
+          </div>
         </div>
       </div>
     </div>
@@ -1484,29 +1534,30 @@ async function supabaseLoad() {
       const rows = await res.json();
       if (rows && rows.length > 0 && rows[0].data) {
         const remoteData = rows[0].data;
-        // Score: how much data does each side have
-        const score = d => (d.habits?.length||0)*10 +
-                           (d.recurring?.length||0)*5 +
-                           (d.notizen?.length||0)*3 +
-                           (d.inbox?.length||0) +
-                           Object.keys(d.mits_by_day||{}).length +
-                           (d.tracker?.wochen?.length||0) +
-                           (d.einkauf?.wochen?.length||0) +
-                           Object.keys(d.tracker?.monatsziele||{}).length*2;
-        const remoteScore = score(remoteData);
-        const localScore  = score(S);
+        const remoteTs = remoteData._syncTs || new Date(rows[0].updated_at).getTime() || 0;
+        const localTs  = S._syncTs || 0;
 
-        if (remoteScore > localScore) {
-          // Remote has more data → use remote
+        // Always use the most recently saved version
+        if (remoteTs > localTs) {
           S = remoteData;
           localStorage.setItem(KEY, JSON.stringify(S));
           updateSyncStatus('synced');
           lastSyncTime = new Date();
           return true;
-        } else if (localScore > 0) {
-          // Local has more data → upload to remote
+        } else if (localTs > 0 && localTs >= remoteTs) {
+          // Local is newer → push to cloud
           await supabaseSave(S);
           return false;
+        } else {
+          // Nothing local yet, load remote if it has data
+          const hasData = remoteData.habits?.length > 0 || remoteData.recurring?.length > 0 || remoteData.inbox?.length > 0;
+          if (hasData) {
+            S = remoteData;
+            localStorage.setItem(KEY, JSON.stringify(S));
+            updateSyncStatus('synced');
+            lastSyncTime = new Date();
+            return true;
+          }
         }
       }
       updateSyncStatus('synced');
@@ -2660,221 +2711,408 @@ function renderOKR() {
   renderOKRLevel(activeOKRLevel);
 }
 
-// ─── STUNDENLOHN ─────────────────────────────────
-if(!S.stundenlohn) S.stundenlohn = { steuer:30, monate:[], tasks:[] };
+// ─── ZEITTRACKING & STUNDENLOHN ──────────────────
+if(!S.stundenlohn) S.stundenlohn = { steuer:30, monate:[], tasks:[], tage:[], kats:[], timer:null };
+if(!S.stundenlohn.tage)  S.stundenlohn.tage  = [];
+if(!S.stundenlohn.kats)  S.stundenlohn.kats  = ['Sourcing','Buchhaltung','Calls/Meetings','Marketing','Lieferanten','Admin/E-Mails','Strategie','Sonstiges'];
 if(!S.stundenlohn.monate) S.stundenlohn.monate = [];
 if(!S.stundenlohn.tasks)  S.stundenlohn.tasks  = [];
 
 const MONATE_NAMEN = ['','Januar','Februar','März','April','Mai','Juni','Juli','August','September','Oktober','November','Dezember'];
 
+let slTagViewMonat = null;
+let slAuswViewMonat = null;
+let slTimerInterval = null;
+let slActiveSLTab = 'tracker';
+
+function switchSLTab(t) {
+  slActiveSLTab = t;
+  document.querySelectorAll('.sl-tabview').forEach(v=>v.style.display='none');
+  document.getElementById('sl-tab-'+t).style.display='block';
+  document.querySelectorAll('.n-tab[data-st]').forEach(b=>b.classList.toggle('active',b.dataset.st===t));
+  if(t==='tracker')    { renderSLKats(); renderSLTagList(); setSlTagDatum(); }
+  if(t==='auswertung') { renderSLAuswertung(); }
+  if(t==='stundenlohn'){ renderSLSummary(); renderSLMonatList(); setTimeout(slAutoFillGewinn,100); }
+}
+
+function setSlTagDatum() {
+  const el = document.getElementById('sl-man-datum');
+  if(el && !el.value) el.value = new Date().toISOString().slice(0,10);
+}
+
+// ── KATEGORIEN ──
+function renderSLKats() {
+  const grid = document.getElementById('sl-kat-grid');
+  const sel  = document.getElementById('sl-man-kat');
+  if(!grid) return;
+  const kats = S.stundenlohn.kats||[];
+  const active = S.stundenlohn.timer?.kat || null;
+
+  grid.innerHTML = kats.map(k => {
+    const isActive = active===k && S.stundenlohn.timer;
+    return `<div style="position:relative">
+      <button onclick="slStartTimer('${k}')" style="
+        width:100%;padding:12px 8px;border-radius:var(--radius-sm);border:2px solid ${isActive?'var(--accent)':'var(--border)'};
+        background:${isActive?'rgba(212,240,60,.12)':'var(--surface2)'};color:${isActive?'var(--accent)':'var(--text)'};
+        cursor:pointer;font-size:13px;font-weight:${isActive?'700':'400'};text-align:center;transition:all .15s">
+        ${isActive?'⏸ ':''}${k}
+      </button>
+      <button onclick="slDelKat('${k}')" style="position:absolute;top:2px;right:4px;background:none;border:none;color:var(--hint);cursor:pointer;font-size:11px;line-height:1;padding:2px" title="Löschen">✕</button>
+    </div>`;
+  }).join('');
+
+  if(sel) sel.innerHTML = kats.map(k=>`<option value="${k}">${k}</option>`).join('');
+}
+
+function slDelKat(k) {
+  if(S.stundenlohn.timer?.kat===k) return; // can't delete active
+  S.stundenlohn.kats = S.stundenlohn.kats.filter(c=>c!==k);
+  save(); renderSLKats();
+}
+
+function slAddKat() {
+  const name = prompt('Neue Kategorie:');
+  if(!name?.trim()) return;
+  S.stundenlohn.kats.push(name.trim());
+  save(); renderSLKats();
+}
+
+// ── TIMER ──
+function slStartTimer(kat) {
+  // If same kat running → stop
+  if(S.stundenlohn.timer?.kat === kat) { slStopTimer(); return; }
+  // If different kat running → stop first
+  if(S.stundenlohn.timer) slStopTimer();
+
+  S.stundenlohn.timer = { kat, start: Date.now() };
+  save();
+  clearInterval(slTimerInterval);
+  slTimerInterval = setInterval(slTickTimer, 1000);
+  slTickTimer();
+  renderSLKats();
+}
+
+function slTickTimer() {
+  const t = S.stundenlohn.timer;
+  const disp = document.getElementById('sl-timer-display');
+  const katEl = document.getElementById('sl-timer-kat');
+  const btn   = document.getElementById('sl-stop-btn');
+  if(!t || !disp) return;
+  const secs = Math.floor((Date.now()-t.start)/1000);
+  const h = String(Math.floor(secs/3600)).padStart(2,'0');
+  const m = String(Math.floor((secs%3600)/60)).padStart(2,'0');
+  const s = String(secs%60).padStart(2,'0');
+  disp.textContent = `${h}:${m}:${s}`;
+  if(katEl) katEl.textContent = `▶ ${t.kat}`;
+  if(btn) btn.style.display='inline-block';
+}
+
+function slStopTimer() {
+  const t = S.stundenlohn.timer;
+  if(!t) return;
+  clearInterval(slTimerInterval);
+  const stunden = Math.round((Date.now()-t.start)/36000)/100; // rounded to 0.01h
+  if(stunden > 0.01) {
+    const datum = new Date().toISOString().slice(0,10);
+    slSaveTagesEintrag(datum, t.kat, stunden, '');
+  }
+  S.stundenlohn.timer = null;
+  const disp = document.getElementById('sl-timer-display');
+  const katEl = document.getElementById('sl-timer-kat');
+  const btn   = document.getElementById('sl-stop-btn');
+  if(disp) disp.textContent = '00:00:00';
+  if(katEl) katEl.textContent = 'Kein Timer läuft';
+  if(btn) btn.style.display='none';
+  save(); renderSLKats(); renderSLTagList();
+}
+
+// ── TAGES-EINTRÄGE ──
+function slSaveTagesEintrag(datum, kat, stunden, notiz) {
+  if(!S.stundenlohn.tage) S.stundenlohn.tage = [];
+  S.stundenlohn.tage.push({ datum, kat, stunden: Math.round(stunden*100)/100, notiz, id: Date.now()+Math.random().toString(36).slice(2) });
+  S.stundenlohn.tage.sort((a,b)=>a.datum.localeCompare(b.datum));
+  slUpdateMonatFromTage(datum);
+}
+
+function slManualAdd() {
+  const datum   = document.getElementById('sl-man-datum')?.value;
+  const kat     = document.getElementById('sl-man-kat')?.value;
+  const stunden = parseFloat(document.getElementById('sl-man-h')?.value);
+  const notiz   = document.getElementById('sl-man-notiz')?.value.trim()||'';
+  if(!datum||!kat||isNaN(stunden)||stunden<=0) return;
+  slSaveTagesEintrag(datum, kat, stunden, notiz);
+  document.getElementById('sl-man-h').value='';
+  document.getElementById('sl-man-notiz').value='';
+  save(); renderSLTagList(); renderSLSummary(); renderSLMonatList();
+}
+
+function slDelEintrag(id) {
+  const e = S.stundenlohn.tage.find(t=>t.id===id);
+  S.stundenlohn.tage = S.stundenlohn.tage.filter(t=>t.id!==id);
+  if(e) slUpdateMonatFromTage(e.datum);
+  save(); renderSLTagList(); renderSLSummary(); renderSLMonatList();
+}
+
+function slUpdateMonatFromTage(datum) {
+  const d = new Date(datum);
+  const monat = d.getMonth()+1, jahr = d.getFullYear();
+  const gesamt = (S.stundenlohn.tage||[])
+    .filter(t=>{ const td=new Date(t.datum); return td.getFullYear()===jahr&&td.getMonth()+1===monat; })
+    .reduce((s,t)=>s+t.stunden,0);
+  let m = S.stundenlohn.monate.find(m=>m.monat===monat&&m.jahr===jahr);
+  if(m) { m.stunden = Math.round(gesamt*100)/100; }
+  else { S.stundenlohn.monate.push({monat,jahr,gewinn:0,stunden:Math.round(gesamt*100)/100,notiz:''}); }
+}
+
+function slTagViewKey() {
+  if(slTagViewMonat) return slTagViewMonat;
+  const n=new Date(); return {year:n.getFullYear(),month:n.getMonth()+1};
+}
+
+function slTagMonatPrev() {
+  const v=slTagViewKey();
+  slTagViewMonat = v.month===1?{year:v.year-1,month:12}:{year:v.year,month:v.month-1};
+  renderSLTagList();
+}
+function slTagMonatNext() {
+  const v=slTagViewKey();
+  slTagViewMonat = v.month===12?{year:v.year+1,month:1}:{year:v.year,month:v.month+1};
+  renderSLTagList();
+}
+
+function renderSLTagList() {
+  const el  = document.getElementById('sl-tag-list');
+  const lbl = document.getElementById('sl-tag-monat-label');
+  if(!el) return;
+  const v = slTagViewKey();
+  if(lbl) lbl.textContent = `${MONATE_NAMEN[v.month]} ${v.year}`;
+
+  const eintraege = (S.stundenlohn.tage||[])
+    .filter(t=>{ const d=new Date(t.datum); return d.getFullYear()===v.year&&d.getMonth()+1===v.month; })
+    .sort((a,b)=>b.datum.localeCompare(a.datum));
+
+  if(!eintraege.length) { el.innerHTML=`<div style="color:var(--muted);font-size:13px;padding:.5rem 0">Noch keine Einträge für diesen Monat.</div>`; return; }
+
+  // Group by date
+  const byDate = {};
+  eintraege.forEach(e=>{ if(!byDate[e.datum]) byDate[e.datum]=[]; byDate[e.datum].push(e); });
+
+  el.innerHTML = Object.entries(byDate).sort((a,b)=>b[0].localeCompare(a[0])).map(([datum,items])=>{
+    const d = new Date(datum);
+    const tagLabel = d.toLocaleDateString('de-DE',{weekday:'long',day:'2-digit',month:'2-digit'});
+    const tagGesamt = items.reduce((s,i)=>s+i.stunden,0);
+    const itemsHtml = items.map(i=>`
+      <div style="display:flex;align-items:center;gap:8px;padding:5px 0 5px 12px;border-bottom:1px solid var(--border)">
+        <span style="font-size:11px;background:var(--surface2);padding:2px 7px;border-radius:10px;color:var(--muted)">${i.kat}</span>
+        <strong style="font-size:13px;min-width:40px">${i.stunden}h</strong>
+        <span style="font-size:12px;color:var(--hint);flex:1">${i.notiz||''}</span>
+        <button onclick="slDelEintrag('${i.id}')" style="background:none;border:none;color:var(--hint);cursor:pointer;font-size:13px">✕</button>
+      </div>`).join('');
+    return `<div style="margin-bottom:.5rem">
+      <div onclick="this.nextElementSibling.style.display=this.nextElementSibling.style.display==='none'?'block':'none'"
+        style="display:flex;justify-content:space-between;align-items:center;padding:8px 0;cursor:pointer;border-bottom:1px solid var(--border)">
+        <span style="font-size:13px;font-weight:500">${tagLabel}</span>
+        <span style="font-size:13px;color:var(--accent);font-weight:600">${Math.round(tagGesamt*100)/100}h ▾</span>
+      </div>
+      <div>${itemsHtml}</div>
+    </div>`;
+  }).join('');
+}
+
+// ── MONATSAUSWERTUNG ──
+function slAuswViewKey() {
+  if(slAuswViewMonat) return slAuswViewMonat;
+  const n=new Date(); return {year:n.getFullYear(),month:n.getMonth()+1};
+}
+function slAuswMonatPrev() {
+  const v=slAuswViewKey();
+  slAuswViewMonat=v.month===1?{year:v.year-1,month:12}:{year:v.year,month:v.month-1};
+  renderSLAuswertung();
+}
+function slAuswMonatNext() {
+  const v=slAuswViewKey();
+  slAuswViewMonat=v.month===12?{year:v.year+1,month:1}:{year:v.year,month:v.month+1};
+  renderSLAuswertung();
+}
+
+function renderSLAuswertung() {
+  const lbl = document.getElementById('sl-aus-label');
+  const el  = document.getElementById('sl-aus-content');
+  if(!el) return;
+  const v = slAuswViewKey();
+  if(lbl) lbl.textContent = `${MONATE_NAMEN[v.month]} ${v.year}`;
+
+  const eintraege = (S.stundenlohn.tage||[])
+    .filter(t=>{ const d=new Date(t.datum); return d.getFullYear()===v.year&&d.getMonth()+1===v.month; });
+
+  if(!eintraege.length) { el.innerHTML=`<div class="card" style="color:var(--muted);font-size:13px">Keine Einträge für diesen Monat.</div>`; return; }
+
+  // By category
+  const byKat = {};
+  eintraege.forEach(e=>{ if(!byKat[e.kat]) byKat[e.kat]=0; byKat[e.kat]+=e.stunden; });
+  const total = Object.values(byKat).reduce((a,b)=>a+b,0);
+  const sorted = Object.entries(byKat).sort((a,b)=>b[1]-a[1]);
+
+  const bars = sorted.map(([kat,h])=>{
+    const pct = Math.round(h/total*100);
+    return `<div style="margin-bottom:.75rem">
+      <div style="display:flex;justify-content:space-between;font-size:13px;margin-bottom:3px">
+        <span>${kat}</span>
+        <span style="color:var(--accent);font-weight:600">${Math.round(h*10)/10}h (${pct}%)</span>
+      </div>
+      <div style="height:8px;background:var(--surface2);border-radius:4px">
+        <div style="height:8px;background:var(--accent);border-radius:4px;width:${pct}%;transition:width .3s"></div>
+      </div>
+    </div>`;
+  }).join('');
+
+  el.innerHTML = `
+    <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:1rem">
+      <div class="stat-box"><div class="lbl">Gesamt Stunden</div><div class="val">${Math.round(total*10)/10}h</div></div>
+      <div class="stat-box"><div class="lbl">Ø pro Tag</div><div class="val">${Math.round(total/new Date(v.year,v.month,0).getDate()*10)/10}h</div></div>
+      <div class="stat-box"><div class="lbl">Kategorien</div><div class="val">${sorted.length}</div></div>
+    </div>
+    <div class="card"><div class="card-title">Zeit nach Kategorie</div>${bars}</div>`;
+}
+
+function slExport() {
+  const v = slAuswViewKey();
+  const eintraege = (S.stundenlohn.tage||[])
+    .filter(t=>{ const d=new Date(t.datum); return d.getFullYear()===v.year&&d.getMonth()+1===v.month; })
+    .sort((a,b)=>a.datum.localeCompare(b.datum));
+
+  const byKat = {};
+  eintraege.forEach(e=>{ if(!byKat[e.kat]) byKat[e.kat]=0; byKat[e.kat]+=e.stunden; });
+  const total = eintraege.reduce((s,e)=>s+e.stunden,0);
+
+  const data = {
+    monat: `${MONATE_NAMEN[v.month]} ${v.year}`,
+    gesamt_stunden: Math.round(total*100)/100,
+    nach_kategorie: Object.entries(byKat).sort((a,b)=>b[1]-a[1]).map(([kat,h])=>({
+      kategorie: kat, stunden: Math.round(h*100)/100, prozent: Math.round(h/total*100)
+    })),
+    tageseintraege: eintraege
+  };
+
+  const blob = new Blob([JSON.stringify(data,null,2)], {type:'application/json'});
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = `zeittracking-${v.year}-${String(v.month).padStart(2,'0')}.json`;
+  document.body.appendChild(a); a.click(); document.body.removeChild(a);
+}
+
+// ── STUNDENLOHN BERECHNUNG ──
 function saveSteuer() {
-  S.stundenlohn.steuer = parseFloat(document.getElementById('sl-steuer').value)||30;
-  save(); renderSLSummary(); renderSLMonatList(); renderSLTasks(); calcQuick();
+  S.stundenlohn.steuer = parseFloat(document.getElementById('sl-steuer')?.value)||30;
+  save(); renderSLSummary(); renderSLMonatList(); calcQuick();
 }
 
 function avgNettoStundenlohn() {
   const monate = S.stundenlohn.monate||[];
-  if(!monate.length) return 0;
   const steuer = S.stundenlohn.steuer||30;
-  const valid = monate.filter(m=>m.stunden>0);
+  const valid = monate.filter(m=>m.stunden>0&&m.gewinn>0);
   if(!valid.length) return 0;
-  const rates = valid.map(m=> (m.gewinn*(1-steuer/100)) / m.stunden );
-  return rates.reduce((a,b)=>a+b,0)/rates.length;
+  return valid.map(m=>(m.gewinn*(1-steuer/100))/m.stunden).reduce((a,b)=>a+b,0)/valid.length;
 }
 
 function slAutoFillGewinn() {
   const monat = parseInt(document.getElementById('sl-monat')?.value);
-  const jahr  = parseInt(document.getElementById('sl-jahr')?.value) || new Date().getFullYear();
-  const mk    = `${jahr}-${String(monat).padStart(2,'0')}`;
-  // Sum Gewinn from tracker wochen for this month
+  const jahr  = parseInt(document.getElementById('sl-jahr')?.value)||new Date().getFullYear();
   const wochen = (S.tracker?.wochen||[]).filter(w=>{
-    const d = w.von ? new Date(w.von) : (w.ts ? new Date(w.ts) : null);
-    return d && d.getFullYear()===jahr && d.getMonth()+1===monat;
+    const d=w.von?new Date(w.von):(w.ts?new Date(w.ts):null);
+    return d&&d.getFullYear()===jahr&&d.getMonth()+1===monat;
   });
   const totalG = wochen.reduce((s,w)=>s+w.gewinn,0);
-  // Also check monatsziele
-  const mzG = S.tracker?.monatsziele?.[mk]?.gewinn || 0;
-  const gewinn = totalG > 0 ? totalG : mzG;
+  const mzG = S.tracker?.monatsziele?.[`${jahr}-${monat}`]?.gewinn||0;
+  const gewinn = totalG>0?totalG:mzG;
   const el = document.getElementById('sl-gewinn');
-  if(el && gewinn > 0) {
-    el.value = Math.round(gewinn);
-    el.style.background = 'rgba(212,240,60,.08)';
-    notify(`✅ Gewinn ${fmtE(gewinn)} aus Finanzen übernommen`);
-  }
+  if(el&&gewinn>0) { el.value=Math.round(gewinn); el.style.background='rgba(212,240,60,.08)'; }
 }
 
 function addMonat() {
-  const monat   = parseInt(document.getElementById('sl-monat').value);
-  const jahr    = parseInt(document.getElementById('sl-jahr').value)||2026;
-  const gewinn  = parseFloat(document.getElementById('sl-gewinn').value);
-  const stunden = parseFloat(document.getElementById('sl-arbeit-h').value);
-  const notiz   = document.getElementById('sl-notiz').value.trim();
-  if(isNaN(gewinn)||isNaN(stunden)||stunden<=0){ notify('Bitte Gewinn und Arbeitsstunden eingeben'); return; }
-  // overwrite if same month+year exists
-  S.stundenlohn.monate = S.stundenlohn.monate.filter(m=>!(m.monat===monat&&m.jahr===jahr));
-  S.stundenlohn.monate.push({id:uid(), monat, jahr, gewinn, stunden, notiz});
-  S.stundenlohn.monate.sort((a,b)=> (b.jahr*12+b.monat)-(a.jahr*12+a.monat));
-  document.getElementById('sl-gewinn').value='';
-  document.getElementById('sl-arbeit-h').value='';
-  document.getElementById('sl-notiz').value='';
-  save(); renderStundenlohn();
-  notify('✅ Eintrag gespeichert!');
-}
-
-function delMonat(id) {
-  S.stundenlohn.monate = S.stundenlohn.monate.filter(m=>m.id!==id);
-  save(); renderStundenlohn();
+  const monat   = parseInt(document.getElementById('sl-monat')?.value);
+  const jahr    = parseInt(document.getElementById('sl-jahr')?.value)||2026;
+  const gewinn  = parseFloat(document.getElementById('sl-gewinn')?.value);
+  if(!monat||isNaN(gewinn)) return;
+  // Get stunden from tage
+  const stunden = (S.stundenlohn.tage||[])
+    .filter(t=>{ const d=new Date(t.datum); return d.getFullYear()===jahr&&d.getMonth()+1===monat; })
+    .reduce((s,t)=>s+t.stunden,0);
+  const existing = S.stundenlohn.monate.find(m=>m.monat===monat&&m.jahr===jahr);
+  if(existing) { existing.gewinn=gewinn; existing.stunden=Math.round(stunden*100)/100; }
+  else { S.stundenlohn.monate.push({monat,jahr,gewinn,stunden:Math.round(stunden*100)/100,notiz:''}); }
+  if(document.getElementById('sl-gewinn')) document.getElementById('sl-gewinn').value='';
+  save(); renderSLSummary(); renderSLMonatList();
 }
 
 function renderSLSummary() {
   const monate = S.stundenlohn.monate||[];
   const steuer = S.stundenlohn.steuer||30;
-  const fmtE = v=>v>0?Math.round(v).toLocaleString('de-DE')+'€':'–';
-  const fmtH = v=>v>0?v.toLocaleString('de-DE',{maximumFractionDigits:1})+'h':'–';
-
-  if(!monate.length) {
-    ['sl-avg-netto','sl-avg-brutto','sl-best','sl-avg-h'].forEach(id=>{
-      const el=document.getElementById(id); if(el) el.textContent='–';
-    }); return;
-  }
-  const valid = monate.filter(m=>m.stunden>0);
-  const nettoRates = valid.map(m=>(m.gewinn*(1-steuer/100))/m.stunden);
-  const bruttoRates = valid.map(m=>m.gewinn/m.stunden);
-  const avgNetto  = nettoRates.reduce((a,b)=>a+b,0)/nettoRates.length;
-  const avgBrutto = bruttoRates.reduce((a,b)=>a+b,0)/bruttoRates.length;
-  const avgH      = monate.reduce((a,m)=>a+m.stunden,0)/monate.length;
-  const best      = valid.reduce((b,m)=> (m.gewinn/m.stunden>b.gewinn/b.stunden?m:b), valid[0]);
-
-  const setEl = (id,v)=>{ const el=document.getElementById(id); if(el) el.textContent=v; };
-  setEl('sl-avg-netto',  fmtE(avgNetto));
-  setEl('sl-avg-brutto', fmtE(avgBrutto));
-  setEl('sl-best',       `${fmtE(best.gewinn/best.stunden)} (${MONATE_NAMEN[best.monat]})`);
-  setEl('sl-avg-h',      fmtH(avgH));
-
-  // Impact grid
-  renderImpact(avgNetto);
+  const valid  = monate.filter(m=>m.stunden>0&&m.gewinn>0);
+  const avgNetto  = document.getElementById('sl-avg-netto');
+  const avgBrutto = document.getElementById('sl-avg-brutto');
+  const best      = document.getElementById('sl-best');
+  const avgH      = document.getElementById('sl-avg-h');
+  if(!valid.length) return;
+  const rates = valid.map(m=>(m.gewinn*(1-steuer/100))/m.stunden);
+  const avgN = rates.reduce((a,b)=>a+b,0)/rates.length;
+  const avgB = valid.map(m=>m.gewinn/m.stunden).reduce((a,b)=>a+b,0)/valid.length;
+  const bestM = valid.reduce((a,b)=>(b.gewinn*(1-steuer/100)/b.stunden)>(a.gewinn*(1-steuer/100)/a.stunden)?b:a);
+  if(avgNetto)  avgNetto.textContent  = avgN.toFixed(2)+'€/h';
+  if(avgBrutto) avgBrutto.textContent = avgB.toFixed(2)+'€/h';
+  if(best)      best.textContent      = MONATE_NAMEN[bestM.monat];
+  if(avgH)      avgH.textContent      = Math.round(valid.reduce((s,m)=>s+m.stunden,0)/valid.length)+'h';
   calcQuick();
-}
-
-function renderImpact(nettoSatz) {
-  const el = document.getElementById('sl-impact-grid');
-  if(!el) return;
-  if(!nettoSatz){ el.innerHTML='<div style="text-align:center;color:var(--muted);font-size:13px;grid-column:1/-1;padding:.5rem">Trage mindestens einen Monat ein.</div>'; return; }
-  const fmtE = v=>Math.round(v).toLocaleString('de-DE')+'€';
-  const items = [
-    { val:fmtE(nettoSatz*0.5),   lbl:'30 Min Ablenkung' },
-    { val:fmtE(nettoSatz),       lbl:'1h verschwendet' },
-    { val:fmtE(nettoSatz*2),     lbl:'2h Social Media' },
-    { val:fmtE(nettoSatz*8),     lbl:'1 Tag (8h)',    accent:true },
-    { val:fmtE(nettoSatz*40),    lbl:'1 Woche (40h)', accent:true },
-    { val:fmtE(nettoSatz*1800),  lbl:'1 Jahr (1800h)',accent:true },
-  ];
-  el.innerHTML = items.map(x=>`
-    <div class="sl-impact-box">
-      <div class="sl-impact-val" style="color:${x.accent?'var(--accent)':'var(--text)'}">${x.val}</div>
-      <div class="sl-impact-lbl">${x.lbl}</div>
-    </div>`).join('');
-}
-
-function slNettoColor(v) {
-  if(v>=80) return 'var(--accent2)';
-  if(v>=40) return 'var(--accent)';
-  if(v>=20) return 'var(--muted)';
-  return 'var(--accent3)';
 }
 
 function renderSLMonatList() {
   const el = document.getElementById('sl-monat-list');
   if(!el) return;
-  const monate = S.stundenlohn.monate||[];
+  const monate = [...(S.stundenlohn.monate||[])].sort((a,b)=>b.jahr-a.jahr||b.monat-a.monat);
   const steuer = S.stundenlohn.steuer||30;
-  if(!monate.length){ el.innerHTML='<div style="font-size:13px;color:var(--muted)">Noch keine Einträge.</div>'; return; }
-  el.innerHTML = `
-    <div style="display:grid;grid-template-columns:110px 1fr 1fr 80px 80px 80px 1fr auto;gap:8px;padding:6px 0;border-bottom:1px solid var(--border);font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.05em">
-      <span>Monat</span><span>Gewinn (brutto)</span><span>Netto (nach Steuer)</span><span>Stunden</span><span>€/h brutto</span><span>€/h netto</span><span>Notiz</span><span></span>
-    </div>`
-    + monate.map(m=>{
-      const netto    = m.gewinn*(1-steuer/100);
-      const bruttoH  = m.stunden>0 ? m.gewinn/m.stunden : 0;
-      const nettoH   = m.stunden>0 ? netto/m.stunden    : 0;
-      const col      = slNettoColor(nettoH);
-      return`<div style="display:grid;grid-template-columns:110px 1fr 1fr 80px 80px 80px 1fr auto;gap:8px;padding:9px 0;border-bottom:1px solid var(--border);align-items:center;font-size:13px">
-        <span style="font-weight:500">${MONATE_NAMEN[m.monat]} ${m.jahr}</span>
-        <span style="font-family:'DM Mono',monospace">${m.gewinn.toLocaleString('de-DE',{minimumFractionDigits:0,maximumFractionDigits:2})} €</span>
-        <span style="font-family:'DM Mono',monospace;color:var(--accent2)">${Math.round(netto).toLocaleString('de-DE')} €</span>
-        <span style="font-family:'DM Mono',monospace;color:var(--muted)">${m.stunden}h</span>
-        <span style="font-family:'DM Mono',monospace">${bruttoH>0?Math.round(bruttoH)+'€':'–'}</span>
-        <span style="font-family:'DM Mono',monospace;font-weight:600;color:${col}">${nettoH>0?Math.round(nettoH)+'€':'–'}</span>
-        <span style="font-size:12px;color:var(--hint)">${esc(m.notiz||'')}</span>
-        <button class="btn btn-danger btn-icon" style="width:20px;height:20px;font-size:12px" onclick="delMonat('${m.id}')">×</button>
-      </div>`;
-    }).join('');
-}
-
-function calcQuick() {
-  const mins   = parseFloat(document.getElementById('sl-quick-min')?.value)||0;
-  const netto  = avgNettoStundenlohn();
-  const el     = document.getElementById('sl-quick-result');
-  if(!el) return;
-  if(!netto||!mins){ el.textContent='–'; return; }
-  el.textContent = (netto/60*mins).toLocaleString('de-DE',{maximumFractionDigits:2})+'€';
-}
-
-function addSLTask() {
-  const label = document.getElementById('sl-task-input').value.trim();
-  const mins  = parseFloat(document.getElementById('sl-task-minuten').value)||0;
-  if(!label||!mins){ notify('Aufgabe und Minuten/Tag eingeben'); return; }
-  S.stundenlohn.tasks.push({id:uid(), label, mins});
-  document.getElementById('sl-task-input').value='';
-  document.getElementById('sl-task-minuten').value='';
-  save(); renderSLTasks();
-}
-
-function delSLTask(id) {
-  S.stundenlohn.tasks = S.stundenlohn.tasks.filter(t=>t.id!==id);
-  save(); renderSLTasks();
-}
-
-function renderSLTasks() {
-  const el = document.getElementById('sl-aufgaben-list');
-  if(!el) return;
-  const tasks  = S.stundenlohn.tasks||[];
-  const netto  = avgNettoStundenlohn();
-  if(!tasks.length){ el.innerHTML='<div style="font-size:12px;color:var(--hint)">Noch keine Aufgaben eingetragen.</div>'; return; }
-  el.innerHTML = tasks.map(t=>{
-    const kostetH      = netto ? netto/60*t.mins : 0;
-    const kostetMonat  = kostetH * 22; // ~22 Arbeitstage
-    let verdict, cls;
-    if(t.mins>=60)     { verdict='Delegieren';     cls='verdict-delegate'; }
-    else if(t.mins>=30){ verdict='Automatisieren?'; cls='verdict-automate'; }
-    else               { verdict='OK';              cls='verdict-ok'; }
-    return`<div class="sl-task-row">
-      <span style="flex:1;font-weight:500">${esc(t.label)}</span>
-      <span style="color:var(--muted);font-size:12px;font-family:'DM Mono',monospace;min-width:55px">${t.mins} min/Tag</span>
-      ${netto?`<span style="font-family:'DM Mono',monospace;font-size:12px;color:var(--accent);min-width:65px">${Math.round(kostetH).toLocaleString('de-DE')}€/Tag</span>`:''}
-      ${netto?`<span style="font-size:12px;color:var(--muted);min-width:75px">${Math.round(kostetMonat).toLocaleString('de-DE')}€/Mo</span>`:''}
-      <span class="sl-task-verdict ${cls}">${verdict}</span>
-      <button class="btn btn-danger btn-icon" style="width:20px;height:20px;font-size:12px" onclick="delSLTask('${t.id}')">×</button>
+  if(!monate.length) { el.innerHTML=`<div style="color:var(--muted);font-size:13px">Noch keine Einträge.</div>`; return; }
+  el.innerHTML = monate.map(m=>{
+    const netto = m.stunden>0&&m.gewinn>0 ? ((m.gewinn*(1-steuer/100))/m.stunden).toFixed(2)+'€/h' : '–';
+    return `<div style="display:flex;align-items:center;gap:12px;padding:8px 0;border-bottom:1px solid var(--border);font-size:13px">
+      <span style="min-width:100px;font-weight:500">${MONATE_NAMEN[m.monat]} ${m.jahr}</span>
+      <span style="color:var(--muted)">Gewinn: <strong style="color:var(--text)">${m.gewinn?m.gewinn.toLocaleString('de-DE')+'€':'–'}</strong></span>
+      <span style="color:var(--muted)">Stunden: <strong style="color:var(--text)">${m.stunden||0}h</strong></span>
+      <span style="color:var(--accent);font-weight:600">${netto}</span>
+      <button onclick="delMonat(${m.monat},${m.jahr})" style="background:none;border:none;color:var(--hint);cursor:pointer;margin-left:auto">✕</button>
     </div>`;
   }).join('');
 }
+
+function delMonat(monat,jahr) {
+  S.stundenlohn.monate = S.stundenlohn.monate.filter(m=>!(m.monat===monat&&m.jahr===jahr));
+  save(); renderSLSummary(); renderSLMonatList();
+}
+
+function calcQuick() {
+  const min = parseFloat(document.getElementById('sl-quick-min')?.value);
+  const el  = document.getElementById('sl-quick-result');
+  if(!el) return;
+  const avg = avgNettoStundenlohn();
+  if(!avg||isNaN(min)) { el.textContent='–'; return; }
+  el.textContent = (avg*min/60).toFixed(2);
+}
+
+function renderSLTasks() {} // kept for compat
 
 function renderStundenlohn() {
   const sl = S.stundenlohn||{};
   const steuerEl = document.getElementById('sl-steuer');
   if(steuerEl) steuerEl.value = sl.steuer??30;
-  // set current month as default
   const now = new Date();
   const monatEl = document.getElementById('sl-monat');
   const jahrEl  = document.getElementById('sl-jahr');
-  if(monatEl && !monatEl.dataset.set) { monatEl.value=now.getMonth()+1; monatEl.dataset.set='1'; }
-  if(jahrEl  && !jahrEl.dataset.set)  { jahrEl.value=now.getFullYear(); jahrEl.dataset.set='1'; }
-  // Auto-fill Gewinn from tracker
-  setTimeout(slAutoFillGewinn, 100);
-  renderSLSummary();
-  renderSLMonatList();
-  renderSLTasks();
+  if(monatEl&&!monatEl.dataset.set){monatEl.value=now.getMonth()+1;monatEl.dataset.set='1';}
+  if(jahrEl&&!jahrEl.dataset.set){jahrEl.value=now.getFullYear();jahrEl.dataset.set='1';}
+  // Restore timer if running
+  if(sl.timer) { clearInterval(slTimerInterval); slTimerInterval=setInterval(slTickTimer,1000); slTickTimer(); }
+  switchSLTab('tracker');
 }
+
 
 // ─── SCHLAF & ROUTINE ────────────────────────────
 if(!S.sleep_log) S.sleep_log = [];
