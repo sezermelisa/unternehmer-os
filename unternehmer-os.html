@@ -1305,16 +1305,49 @@ textarea{resize:vertical;line-height:1.6}
           </div>
           <div id="ek-verlauf-list"></div>
         </div>
-      </div>
 
-      <!-- STUNDENLOHN TAB (eingebettet) -->
-      <div id="tr-tab-stundenlohn" class="tr-tabview" style="display:none">
-        <div id="stundenlohn-inner"></div>
-      </div>
+        <!-- UMSATZ-PROGNOSE RECHNER -->
+        <div class="card" style="margin-top:1rem;border:1px solid var(--accent)">
+          <div class="card-title">📈 Umsatz-Prognose</div>
+          <div style="font-size:12px;color:var(--muted);margin-bottom:1rem">Berechnet aus deinem historischen Verhältnis Einkauf → Umsatz, welchen Umsatz du bei einem geplanten Einkaufsvolumen erwarten kannst.</div>
+          <div style="display:flex;gap:10px;align-items:flex-end;flex-wrap:wrap;margin-bottom:1rem">
+            <div>
+              <label class="sl-label">Geplantes Einkaufsvolumen (€)</label>
+              <input type="number" id="prog-einkauf" placeholder="z.B. 350000" min="0" style="width:170px" oninput="calcPrognose()">
+            </div>
+          </div>
+          <div id="prog-result"></div>
+        </div>
 
-      <!-- WIEDERKEHRENDE TAB (eingebettet) -->
-      <div id="tr-tab-wiederkehrend" class="tr-tabview" style="display:none">
-        <div id="wiederkehrend-inner"></div>
+        <!-- LAGERUMSCHLAG -->
+        <div class="card" style="margin-top:1rem">
+          <div class="card-title">🔄 Lagerumschlag <span style="font-size:11px;color:var(--muted);font-weight:400">Ziel: max. 2 Monate (60 Tage)</span></div>
+          <div style="font-size:12px;color:var(--muted);margin-bottom:1rem">Trage monatlich deinen Amazon-Lagerwert (FBA-Inventur) ein – das Tool zeigt wie schnell du abverkaufst, basierend auf deinem Umsatz.</div>
+          <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:flex-end;margin-bottom:1rem">
+            <div>
+              <label class="sl-label">Monat</label>
+              <select id="lager-monat" style="width:110px">
+                <option value="1">Januar</option><option value="2">Februar</option>
+                <option value="3">März</option><option value="4">April</option>
+                <option value="5">Mai</option><option value="6">Juni</option>
+                <option value="7">Juli</option><option value="8">August</option>
+                <option value="9">September</option><option value="10">Oktober</option>
+                <option value="11">November</option><option value="12">Dezember</option>
+              </select>
+            </div>
+            <div>
+              <label class="sl-label">Jahr</label>
+              <input type="number" id="lager-jahr" value="2026" min="2020" max="2035" style="width:80px">
+            </div>
+            <div style="flex:1;min-width:140px">
+              <label class="sl-label">Lagerwert (€)</label>
+              <input type="number" id="lager-wert" placeholder="z.B. 200000" min="0" style="width:100%">
+            </div>
+            <button class="btn btn-accent" onclick="addLagerwert()">Speichern</button>
+          </div>
+          <div id="lager-result"></div>
+          <div id="lager-verlauf" style="margin-top:1rem"></div>
+        </div>
       </div>
 
     </div><!-- end v-tracker -->
@@ -4375,6 +4408,152 @@ function toggleTrGrp(id) {
 function renderTracker() {
   renderTrUmsatz();
   renderEkVerlauf();  // Always recalculates everything fresh from S.einkauf.wochen
+  calcPrognose();
+  renderLager();
+}
+
+// ─── UMSATZ-PROGNOSE ─────────────────────────────
+function calcPrognose() {
+  const el = document.getElementById('prog-result');
+  if(!el) return;
+  const plan = parseFloat(document.getElementById('prog-einkauf')?.value);
+
+  // Calculate historical ratio: total Umsatz / total Einkauf
+  const totalUmsatz  = (S.tracker?.wochen||[]).reduce((s,w)=>s+(w.umsatz||0),0);
+  const totalGewinn  = (S.tracker?.wochen||[]).reduce((s,w)=>s+(w.gewinn||0),0);
+  const totalEinkauf = (S.einkauf?.wochen||[]).reduce((s,w)=>s+(w.vol||0),0);
+
+  if(totalEinkauf <= 0 || totalUmsatz <= 0) {
+    el.innerHTML = `<div style="color:var(--muted);font-size:13px">Noch nicht genug Daten. Trage erst Umsatz und Einkauf ein, dann kann ich eine Prognose berechnen.</div>`;
+    return;
+  }
+
+  const umsatzRatio = totalUmsatz / totalEinkauf;   // z.B. 1.15 = 15% Aufschlag
+  const gewinnMarge = totalGewinn / totalUmsatz;    // z.B. 0.10 = 10% Marge
+
+  // Show ratio info even without plan input
+  const ratioInfo = `<div style="display:grid;grid-template-columns:repeat(2,1fr);gap:10px;margin-bottom:1rem">
+    <div class="stat-box"><div class="lbl">Dein Umsatz-Faktor</div><div class="val">${umsatzRatio.toFixed(2)}×</div></div>
+    <div class="stat-box"><div class="lbl">Deine Ø Gewinnmarge</div><div class="val">${(gewinnMarge*100).toFixed(1)}%</div></div>
+  </div>
+  <div style="font-size:11px;color:var(--hint);margin-bottom:1rem">Basis: ${fmtE(totalEinkauf)} Einkauf → ${fmtE(totalUmsatz)} Umsatz (gesamt erfasst)</div>`;
+
+  if(isNaN(plan) || plan <= 0) {
+    el.innerHTML = ratioInfo + `<div style="color:var(--muted);font-size:13px">Gib oben ein geplantes Einkaufsvolumen ein für die Prognose.</div>`;
+    return;
+  }
+
+  const progUmsatz = plan * umsatzRatio;
+  const progGewinn = progUmsatz * gewinnMarge;
+
+  el.innerHTML = ratioInfo + `
+    <div style="background:rgba(212,240,60,.06);border:1px solid var(--accent);border-radius:var(--radius-sm);padding:1rem">
+      <div style="font-size:12px;color:var(--muted);margin-bottom:.5rem">Bei ${fmtE(plan)} Einkaufsvolumen erwartest du:</div>
+      <div style="display:grid;grid-template-columns:repeat(2,1fr);gap:1rem">
+        <div>
+          <div style="font-size:11px;color:var(--muted)">Prognostizierter Umsatz</div>
+          <div style="font-size:28px;font-weight:700;color:var(--accent)">${fmtE(progUmsatz)}</div>
+        </div>
+        <div>
+          <div style="font-size:11px;color:var(--muted)">Prognostizierter Gewinn</div>
+          <div style="font-size:28px;font-weight:700;color:var(--accent2)">${fmtE(progGewinn)}</div>
+        </div>
+      </div>
+    </div>
+    <div style="font-size:11px;color:var(--hint);margin-top:.75rem">⚠️ Schätzung basierend auf deinen bisherigen Durchschnittswerten. Tatsächliche Werte hängen von Marge, Verkaufsgeschwindigkeit und Lagerdauer ab.</div>`;
+}
+
+// ─── LAGERUMSCHLAG ───────────────────────────────
+if(!S.lager) S.lager = []; // [{monat, jahr, wert}]
+
+function addLagerwert() {
+  const monat = parseInt(document.getElementById('lager-monat')?.value);
+  const jahr  = parseInt(document.getElementById('lager-jahr')?.value)||2026;
+  const wert  = parseFloat(document.getElementById('lager-wert')?.value);
+  if(!monat||isNaN(wert)||wert<0) return;
+  if(!S.lager) S.lager=[];
+  const existing = S.lager.find(l=>l.monat===monat&&l.jahr===jahr);
+  if(existing) existing.wert=wert;
+  else S.lager.push({monat,jahr,wert});
+  if(document.getElementById('lager-wert')) document.getElementById('lager-wert').value='';
+  save(); renderLager();
+}
+
+function delLagerwert(monat,jahr) {
+  S.lager = (S.lager||[]).filter(l=>!(l.monat===monat&&l.jahr===jahr));
+  save(); renderLager();
+}
+
+function umsatzForMonth(monat,jahr) {
+  // Sum Umsatz for given month from tracker.wochen
+  return (S.tracker?.wochen||[]).filter(w=>{
+    const d = w.von?new Date(w.von):(w.ts?new Date(w.ts):null);
+    return d && d.getFullYear()===jahr && d.getMonth()+1===monat;
+  }).reduce((s,w)=>s+(w.umsatz||0),0);
+}
+
+function wareneinsatzForMonth(monat,jahr) {
+  // Umsatz of month × (1 - durchschnittliche Marge) = ungefährer Wareneinsatz (zu EK-Preisen)
+  const umsatz = umsatzForMonth(monat,jahr);
+  if(umsatz<=0) return 0;
+  // Calculate overall ratio: total Einkauf / total Umsatz
+  const totalUmsatz  = (S.tracker?.wochen||[]).reduce((s,w)=>s+(w.umsatz||0),0);
+  const totalEinkauf = (S.einkauf?.wochen||[]).reduce((s,w)=>s+(w.vol||0),0);
+  if(totalUmsatz<=0 || totalEinkauf<=0) return umsatz; // fallback: use umsatz directly
+  const ekRatio = totalEinkauf / totalUmsatz; // z.B. 0.87 = 87% des Umsatzes ist Wareneinsatz
+  return umsatz * ekRatio;
+}
+
+function renderLager() {
+  const res = document.getElementById('lager-result');
+  const ver = document.getElementById('lager-verlauf');
+  if(!res) return;
+
+  // set defaults
+  const now = new Date();
+  const mEl = document.getElementById('lager-monat');
+  const jEl = document.getElementById('lager-jahr');
+  if(mEl && !mEl.dataset.set){ mEl.value=now.getMonth()+1; mEl.dataset.set='1'; }
+  if(jEl && !jEl.dataset.set){ jEl.value=now.getFullYear(); jEl.dataset.set='1'; }
+
+  const lager = [...(S.lager||[])].sort((a,b)=>b.jahr-a.jahr||b.monat-a.monat);
+  if(!lager.length){ res.innerHTML=`<div style="color:var(--muted);font-size:13px">Noch kein Lagerwert eingetragen.</div>`; if(ver)ver.innerHTML=''; return; }
+
+  // Latest entry → calculate turnover based on Wareneinsatz (abverkaufte Ware zu EK-Preisen)
+  const latest = lager[0];
+  const wareneinsatz = wareneinsatzForMonth(latest.monat, latest.jahr);
+
+  let turnoverHtml = '';
+  if(wareneinsatz > 0) {
+    const tageUmschlag = (latest.wert / wareneinsatz) * 30;
+    const monateUmschlag = tageUmschlag / 30;
+    const imZiel = tageUmschlag <= 60;
+    const farbe = imZiel ? 'var(--accent2)' : 'var(--accent3)';
+    turnoverHtml = `
+      <div style="display:grid;grid-template-columns:repeat(2,1fr);gap:10px;margin-bottom:.5rem">
+        <div class="stat-box"><div class="lbl">Umschlagszeit</div><div class="val" style="color:${farbe}">${Math.round(tageUmschlag)} Tage</div></div>
+        <div class="stat-box"><div class="lbl">= Monate</div><div class="val" style="color:${farbe}">${monateUmschlag.toFixed(1)}</div></div>
+      </div>
+      <div style="font-size:11px;color:var(--hint)">Lagerwert ${fmtE(latest.wert)} (${MONATE_NAMEN[latest.monat]}) ÷ abverkaufte Ware ${fmtE(wareneinsatz)} · Ziel: ≤ 60 Tage</div>`;
+  } else {
+    turnoverHtml = `<div style="font-size:12px;color:var(--muted)">Für ${MONATE_NAMEN[latest.monat]} ${latest.jahr} ist kein Umsatz erfasst – Umschlag kann nicht berechnet werden.</div>`;
+  }
+  res.innerHTML = turnoverHtml;
+
+  // Verlauf
+  if(ver) {
+    ver.innerHTML = `<div style="font-size:12px;color:var(--muted);margin-bottom:.5rem">Verlauf</div>` + lager.map(l=>{
+      const we = wareneinsatzForMonth(l.monat,l.jahr);
+      const tage = we>0 ? Math.round((l.wert/we)*30) : null;
+      const farbe = tage===null ? 'var(--muted)' : (tage<=60?'var(--accent2)':'var(--accent3)');
+      return `<div style="display:flex;align-items:center;gap:12px;padding:7px 0;border-bottom:1px solid var(--border);font-size:13px">
+        <span style="min-width:100px;font-weight:500">${MONATE_NAMEN[l.monat]} ${l.jahr}</span>
+        <span style="color:var(--muted)">Lager: <strong style="color:var(--text)">${fmtE(l.wert)}</strong></span>
+        <span style="color:${farbe};font-weight:600">${tage===null?'–':tage+' Tage'}</span>
+        <button onclick="delLagerwert(${l.monat},${l.jahr})" style="background:none;border:none;color:var(--hint);cursor:pointer;margin-left:auto">✕</button>
+      </div>`;
+    }).join('');
+  }
 }
 
 // Auto-refresh wenn localStorage von außen geändert wird (z.B. anderer Tab)
