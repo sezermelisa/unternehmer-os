@@ -1294,7 +1294,7 @@ textarea{resize:vertical;line-height:1.6}
         <div id="ek-wochenziel-wrap" style="margin-bottom:1rem;display:none">
           <div class="card" style="border-color:var(--border2)">
             <div class="card-title">Was du noch brauchst – um dein Monatsziel zu erreichen</div>
-            <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px" id="ek-wochenziel-grid"></div>
+            <div id="ek-wochenziel-grid"></div>
           </div>
         </div>
 
@@ -4355,6 +4355,12 @@ function renderEkVerlauf() {
     const sollWocheFix    = sollTagFix * 7;
     const sollTagAsinsFix = zielAsins>0 ? zielAsins / lastDay : 0;
 
+    // DYNAMISCH (Hochrechnung): Rest des Monatsziels verteilt auf die verbleibenden Tage.
+    // Pausierst du / machst Urlaub, sinkt remDays -> diese Werte steigen automatisch.
+    const remWeeks     = Math.max(1, Math.ceil(remDays/7));
+    const restDynTag   = restVol / remDays;
+    const restDynWoche = restDynTag * 7;
+
     // DYNAMISCH: was du bis Ende HEUTE noch ausgeben musst, um auf der idealen Linie zu sein
     const dayOfMonth   = now.getDate();
     const zielBisHeute = sollTagFix * dayOfMonth;          // ideales Soll-Summe bis Ende heute
@@ -4384,16 +4390,26 @@ function renderEkVerlauf() {
     const wocheAufKurs  = sollWocheFix>0 && istVolWoche >= sollWocheFix;
 
     if(zielVol>0 || zielAsins>0) {
-      grid.innerHTML=[
-        {lbl:'Soll pro Tag (fix)',    val:fmtE(Math.round(sollTagFix)),   sub:'gleichm\u00e4\u00dfiges Tempo'},
-        {lbl:'Soll pro Woche (fix)',  val:fmtE(Math.round(sollWocheFix)), sub:'fester Richtwert'},
-        {lbl:'Heute noch n\u00f6tig',  val:aufKurs?'\u2713 auf Kurs':fmtE(Math.round(heuteNochVol)), sub:aufKurs?`Monat schon: ${fmtE(Math.round(istVol))}`:'um auf Kurs zu sein'},
-        {lbl:'Diese Woche noch',      val:wocheAufKurs?'\u2713 erreicht':fmtE(Math.round(wocheNochVol)), sub:`Woche schon: ${fmtE(Math.round(istVolWoche))}`},
-        {lbl:'Soll pro Tag (ASINs)',  val:Math.ceil(sollTagAsinsFix)+'',  sub:`noch ${restAsins.toLocaleString('de-DE')} ASINs`},
-        {lbl:'Bereits erreicht',      val:fmtE(istVol),                   sub:`${istAsins.toLocaleString('de-DE')} ASINs`},
-      ].map(x=>`<div class="stat-box"><div class="lbl">${x.lbl}</div><div class="val" style="font-size:18px">${x.val}</div>${x.sub?`<div style="font-size:11px;color:var(--muted)">${x.sub}</div>`:''}</div>`).join('');
+      const box = x=>`<div class="stat-box"><div class="lbl">${x.lbl}</div><div class="val" style="font-size:18px">${x.val}</div>${x.sub?`<div style="font-size:11px;color:var(--muted)">${x.sub}</div>`:''}</div>`;
+      const section = (title, boxes)=>`<div style="font-size:11px;letter-spacing:.04em;text-transform:uppercase;color:var(--hint);margin:.15rem 0 .5rem">${title}</div><div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin-bottom:.9rem">${boxes.map(box).join('')}</div>`;
+      const zielErreicht = restVol<=0;
+      grid.innerHTML =
+        section('Fester Plan \u2013 gleichm\u00e4\u00dfiges Tempo', [
+          {lbl:'Soll pro Tag (fix)',   val:fmtE(Math.round(sollTagFix)),   sub:'\u00e4ndert sich nie'},
+          {lbl:'Soll pro Woche (fix)', val:fmtE(Math.round(sollWocheFix)), sub:'fester Richtwert'},
+        ]) +
+        section('Dynamisch \u2013 passt sich an die Restzeit an', [
+          {lbl:'Rest pro Tag',   val:zielErreicht?'\u2713 erreicht':fmtE(Math.round(restDynTag)),   sub:`noch ${remDays} Tage`},
+          {lbl:'Rest pro Woche', val:zielErreicht?'\u2713 erreicht':fmtE(Math.round(restDynWoche)), sub:`Tagesrate \u00d7 7 \u00b7 ~${remWeeks} Wo. \u00fcbrig`},
+          {lbl:'Heute noch n\u00f6tig', val:aufKurs?'\u2713 auf Kurs':fmtE(Math.round(heuteNochVol)), sub:aufKurs?`Monat schon: ${fmtE(Math.round(istVol))}`:'um auf Kurs zu sein'},
+          {lbl:'Diese Woche noch', val:wocheAufKurs?'\u2713 erreicht':fmtE(Math.round(wocheNochVol)), sub:`Woche schon: ${fmtE(Math.round(istVolWoche))}`},
+        ]) +
+        section('Fortschritt', [
+          {lbl:'Bereits erreicht (Monat)', val:fmtE(istVol), sub:`${istAsins.toLocaleString('de-DE')} ASINs`},
+          {lbl:'Soll pro Tag (ASINs)', val:Math.ceil(sollTagAsinsFix)+'', sub:`noch ${restAsins.toLocaleString('de-DE')} ASINs`},
+        ]);
     } else {
-      grid.innerHTML=`<div style="grid-column:1/-1;color:var(--muted);font-size:13px;padding:.5rem">Setze oben ein Monatsziel um zu sehen was du pro Tag/Woche brauchst.</div>`;
+      grid.innerHTML=`<div style="color:var(--muted);font-size:13px;padding:.5rem">Setze oben ein Monatsziel um zu sehen was du pro Tag/Woche brauchst.</div>`;
     }
   } else if(wrap) wrap.style.display='none';
 
