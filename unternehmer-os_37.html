@@ -3791,7 +3791,7 @@ function renderTrMonat() {
   let status='';
   if(ziel.umsatz>0){
     const rest=Math.max(0,ziel.umsatz-totalU);
-    if(rest>0) status=`Noch ${remDays} Tage – du brauchst <strong style="color:var(--accent2)">${fmtE(Math.ceil(rest/Math.max(remDays,1)))}/Tag</strong> (<strong>${fmtE(Math.ceil(rest/remWeeks))}/Woche</strong>) um das Umsatzziel zu erreichen.`;
+    if(rest>0) status=`Noch ${remDays} Tage – du brauchst <strong style="color:var(--accent2)">${fmtE(Math.ceil(rest/Math.max(remDays,1)))}/Tag</strong> (<strong>${fmtE(Math.ceil(rest/Math.max(remDays,1))*7)}/Woche</strong>) um das Umsatzziel zu erreichen.`;
     else status=`<span style="color:var(--accent2);font-weight:600">🎉 Umsatz-Monatsziel erreicht!</span>`;
   }
   setEl('tr-m-status',status);
@@ -3913,14 +3913,12 @@ function renderTrUmsatz() {
       const d=w.von?new Date(w.von):(w.ts?new Date(w.ts):null);
       return d&&d.getFullYear()===now.getFullYear()&&d.getMonth()===now.getMonth();
     });
-    const useW=curMon.length>0?curMon:wochen;
-    let totalDays=0,sumU=0,sumG=0;
-    useW.forEach(w=>{
-      const tage=w.von&&w.bis?Math.round((new Date(w.bis)-new Date(w.von))/86400000)+1:1;
-      totalDays+=tage; sumU+=w.umsatz; sumG+=w.gewinn;
-    });
-    const avgTagU=totalDays>0?sumU/totalDays:0;
-    const avgTagG=totalDays>0?sumG/totalDays:0;
+    const useW=curMon; // only current month - don't fall back to all history
+    let sumU=0,sumG=0;
+    useW.forEach(w=>{ sumU+=w.umsatz; sumG+=w.gewinn; });
+    const totalDays=Math.max(1, now.getDate()); // days elapsed this month
+    const avgTagU=sumU>0?sumU/totalDays:0;
+    const avgTagG=sumG>0?sumG/totalDays:0;
     const tagZielU=t.zielUmsatz>0?t.zielUmsatz/365:0;
     const tagZielG=t.zielGewinn>0?t.zielGewinn/365:0;
     const lbl=curMon.length>0?`Ø ${MONATE_DE[now.getMonth()+1]}`:'Ø Alle';
@@ -4088,7 +4086,7 @@ function renderEkMonat() {
   let status = `<span style="font-size:12px;color:var(--hint)">${kwInfo}</span>`;
   if(ziel.volumen>0) {
     const rest = Math.max(0, ziel.volumen-totalV);
-    if(rest>0) status += `<br><span style="font-size:13px">Noch ${remDays} Tage – du brauchst <strong style="color:var(--accent)">${fmtE(Math.ceil(rest/Math.max(remDays,1)))}/Tag</strong> (<strong>${fmtE(Math.ceil(rest/remWeeks))}/Woche</strong>) um das Monatsziel zu erreichen.</span>`;
+    if(rest>0) status += `<br><span style="font-size:13px">Noch ${remDays} Tage – du brauchst <strong style="color:var(--accent)">${fmtE(Math.ceil(rest/Math.max(remDays,1)))}/Tag</strong> (<strong>${fmtE(Math.ceil(rest/Math.max(remDays,1))*7)}/Woche</strong>) um das Monatsziel zu erreichen.</span>`;
     else       status += `<br><span style="color:var(--accent2);font-weight:600">🎉 Monatsziel Volumen erreicht!</span>`;
   }
   setEl('ek-m-status', status);
@@ -4286,26 +4284,24 @@ function renderEkVerlauf() {
 
     // Get current month entries only (using splits or monat field)
     const curW=wochen.filter(w=>getEntryVolForMonth(w,curMk)>0);
-    const useW=curW.length>0?curW:wochen;
+    const useW=curW; // only current month - don't fall back to all history
 
-    // Sum total volume & days in current month entries
-    let totalCurVol=0, totalCurTage=0, totalCurAsins=0;
+    // Sum total volume & asins in current month entries
+    let totalCurVol=0, totalCurAsins=0;
     useW.forEach(w=>{
       const vol=getEntryVolForMonth(w,curMk)||w.vol;
       totalCurVol+=vol;
       totalCurAsins+=getEntryAsinsForMonth(w,curMk)||(w.asins||0);
-      // Count days: use splits, or von/bis, or assume 1
-      if(w.splits&&w.splits.length){
-        const s=w.splits.find(s=>`${s.jahr}-${String(s.monat).padStart(2,'0')}`===curMk);
-        totalCurTage+=s?s.tage:1;
-      } else if(w.von&&w.bis){
-        totalCurTage+=Math.round((new Date(w.bis)-new Date(w.von))/86400000)+1;
-      } else { totalCurTage+=1; }
     });
 
-    const avgTag  = totalCurTage>0 ? totalCurVol/totalCurTage : 0;
+    // Days elapsed in current month (so far) - this is the correct basis for daily average
+    const isCurrentMonth = true; // we're always looking at current month here
+    const today = now.getDate();
+    const totalCurTage = Math.max(1, today); // days elapsed this month
+
+    const avgTag  = totalCurVol>0 ? totalCurVol/totalCurTage : 0;
     const avgWoche= avgTag*7;
-    const avgAsinTag = totalCurTage>0 ? totalCurAsins/totalCurTage : 0;
+    const avgAsinTag = totalCurAsins>0 ? totalCurAsins/totalCurTage : 0;
 
     // Soll per day from year goal
     const tagZielV = e.zielVolumen>0 ? e.zielVolumen/jahresTage : 0;
