@@ -3035,13 +3035,43 @@ function renderSLAuswertung() {
     </div>`;
   }).join('');
 
+  // Per day (expandable): hours per category for each day
+  const byDate = {};
+  eintraege.forEach(e=>{ if(!byDate[e.datum]) byDate[e.datum]=[]; byDate[e.datum].push(e); });
+  const anzahlTage = Object.keys(byDate).length;
+
+  const tageHtml = Object.entries(byDate).sort((a,b)=>b[0].localeCompare(a[0])).map(([datum,items])=>{
+    const d = new Date(datum);
+    const tagLabel = d.toLocaleDateString('de-DE',{weekday:'long',day:'2-digit',month:'2-digit'});
+    const tagGesamt = items.reduce((s,i)=>s+i.stunden,0);
+    // aggregate hours per category within the day
+    const tagKat = {};
+    items.forEach(i=>{ if(!tagKat[i.kat]) tagKat[i.kat]=0; tagKat[i.kat]+=i.stunden; });
+    const katRows = Object.entries(tagKat).sort((a,b)=>b[1]-a[1]).map(([kat,h])=>{
+      const pct = tagGesamt ? Math.round(h/tagGesamt*100) : 0;
+      return `<div style="display:flex;justify-content:space-between;align-items:center;font-size:12.5px;padding:5px 0 5px 12px">
+        <span style="font-size:11px;background:var(--surface2);padding:2px 7px;border-radius:10px;color:var(--muted)">${kat}</span>
+        <span style="color:var(--accent);font-weight:600">${Math.round(h*10)/10}h <span style="color:var(--muted);font-weight:400">(${pct}%)</span></span>
+      </div>`;
+    }).join('');
+    return `<div style="margin-bottom:.4rem">
+      <div onclick="this.nextElementSibling.style.display=this.nextElementSibling.style.display==='none'?'block':'none'"
+        style="display:flex;justify-content:space-between;align-items:center;padding:8px 0;cursor:pointer;border-bottom:1px solid var(--border)">
+        <span style="font-size:13px;font-weight:500">${tagLabel}</span>
+        <span style="font-size:13px;color:var(--accent);font-weight:600">${Math.round(tagGesamt*100)/100}h ▾</span>
+      </div>
+      <div style="display:none;padding-bottom:6px">${katRows}</div>
+    </div>`;
+  }).join('');
+
   el.innerHTML = `
     <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:1rem">
       <div class="stat-box"><div class="lbl">Gesamt Stunden</div><div class="val">${Math.round(total*10)/10}h</div></div>
       <div class="stat-box"><div class="lbl">Ø pro Tag</div><div class="val">${Math.round(total/new Date(v.year,v.month,0).getDate()*10)/10}h</div></div>
       <div class="stat-box"><div class="lbl">Kategorien</div><div class="val">${sorted.length}</div></div>
     </div>
-    <div class="card"><div class="card-title">Zeit nach Kategorie</div>${bars}</div>`;
+    <div class="card"><div class="card-title">Zeit nach Kategorie</div>${bars}</div>
+    <div class="card"><div class="card-title">Tage im Detail <span style="font-size:11px;color:var(--muted);font-weight:400">(${anzahlTage} Tage · zum Aufklappen antippen)</span></div>${tageHtml}</div>`;
 }
 
 function slExport() {
