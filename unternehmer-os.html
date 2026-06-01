@@ -3788,8 +3788,8 @@ function renderTrMonat() {
   renderBar('tr-m-bar-u',pctU,trColor(pctU));
   renderBar('tr-m-bar-g',pctG,trColor(pctG));
 
-  const lastDay=new Date(now.getFullYear(),now.getMonth()+1,0);
-  const remDays=Math.max(0,Math.ceil((lastDay-now)/86400000));
+  const lastDayNum=new Date(now.getFullYear(),now.getMonth()+1,0).getDate();
+  const remDays=Math.max(1, lastDayNum - now.getDate() + 1);
   const remWeeks=Math.max(1,Math.ceil(remDays/7));
   let status='';
   if(ziel.umsatz>0){
@@ -4091,8 +4091,9 @@ function renderEkMonat() {
 
   // Show which KWs are in this month + remaining time
   const kws = kwsInMonth(monatNum, jahr);
-  const lastDay  = new Date(jahr, monatNum, 0);
-  const remDays  = Math.max(0, Math.ceil((lastDay - now) / 86400000));
+  const lastDayNum = new Date(jahr, monatNum, 0).getDate();
+  const isCurMonth = (jahr===now.getFullYear() && monatNum===now.getMonth()+1);
+  const remDays  = isCurMonth ? Math.max(1, lastDayNum - now.getDate() + 1) : lastDayNum;
   const remWeeks = Math.max(1, Math.ceil(remDays/7));
   const kwInfo   = `Diesen Monat: ${kws.map(w=>'KW '+w).join(', ')}`;
 
