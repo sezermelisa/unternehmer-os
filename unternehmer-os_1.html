@@ -1294,7 +1294,7 @@ textarea{resize:vertical;line-height:1.6}
         <div id="ek-wochenziel-wrap" style="margin-bottom:1rem;display:none">
           <div class="card" style="border-color:var(--border2)">
             <div class="card-title">Was du noch brauchst – um dein Monatsziel zu erreichen</div>
-            <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px" id="ek-wochenziel-grid"></div>
+            <div id="ek-wochenziel-grid"></div>
           </div>
         </div>
 
@@ -4129,8 +4129,14 @@ function renderEkMonat() {
 
   let status = `<span style="font-size:12px;color:var(--hint)">${kwInfo}</span>`;
   if(ziel.volumen>0) {
+    // FIXED anchor: even pace needed for the whole month, never changes with progress
+    const sollTagFix   = ziel.volumen / lastDayNum;
+    const sollWocheFix = sollTagFix * 7;
+    status += `<br><span style="font-size:13px;color:var(--muted)">Soll-Schnitt (fix): <strong style="color:var(--text)">${fmtE(Math.round(sollTagFix))}/Tag</strong> · <strong style="color:var(--text)">${fmtE(Math.round(sollWocheFix))}/Woche</strong> <span style="color:var(--hint)">– gleichmäßiges Tempo für ${fmtE(ziel.volumen)}</span></span>`;
+
+    // DYNAMIC: how much you still need from here on (adjusts as you log purchases / time passes)
     const rest = Math.max(0, ziel.volumen-totalV);
-    if(rest>0) status += `<br><span style="font-size:13px">Noch ${remDays} Tage – du brauchst <strong style="color:var(--accent)">${fmtE(Math.ceil(rest/Math.max(remDays,1)))}/Tag</strong> (<strong>${fmtE(Math.ceil(rest/Math.max(remDays,1))*7)}/Woche</strong>) um das Monatsziel zu erreichen.</span>`;
+    if(rest>0) status += `<br><span style="font-size:13px">Noch nötig: <strong style="color:var(--accent)">${fmtE(Math.ceil(rest/Math.max(remDays,1)))}/Tag</strong> · <strong style="color:var(--accent)">${fmtE(Math.ceil(rest/Math.max(remDays,1))*7)}/Woche</strong> <span style="color:var(--hint)">– noch ${remDays} Tage, ${fmtE(rest)} offen</span></span>`;
     else       status += `<br><span style="color:var(--accent2);font-weight:600">🎉 Monatsziel Volumen erreicht!</span>`;
   }
   setEl('ek-m-status', status);
@@ -4344,20 +4350,66 @@ function renderEkVerlauf() {
     const restVol   = Math.max(0, zielVol   - istVol);
     const restAsins = Math.max(0, zielAsins - istAsins);
 
-    // Soll pro Tag / Woche um Ziel zu erreichen
-    const sollTagVol   = restVol / remDays;
-    const sollWocheVol  = sollTagVol * 7;
-    const sollTagAsins = restAsins / remDays;
+    // FESTER Anker: gleichmäßiges Tempo fürs ganze Monatsziel – ändert sich NIE mit dem Fortschritt
+    const sollTagFix      = zielVol>0   ? zielVol   / lastDay : 0;
+    const sollWocheFix    = sollTagFix * 7;
+    const sollTagAsinsFix = zielAsins>0 ? zielAsins / lastDay : 0;
+
+    // DYNAMISCH (Hochrechnung): Rest des Monatsziels verteilt auf die verbleibenden Tage.
+    // Pausierst du / machst Urlaub, sinkt remDays -> diese Werte steigen automatisch.
+    const remWeeks     = Math.max(1, Math.ceil(remDays/7));
+    const restDynTag   = restVol / remDays;
+    const restDynWoche = restDynTag * 7;
+
+    // DYNAMISCH: was du bis Ende HEUTE noch ausgeben musst, um auf der idealen Linie zu sein
+    const dayOfMonth   = now.getDate();
+    const zielBisHeute = sollTagFix * dayOfMonth;          // ideales Soll-Summe bis Ende heute
+    const heuteNochVol = Math.max(0, zielBisHeute - istVol);
+    const aufKurs      = istVol >= zielBisHeute;           // bist du dem Plan voraus?
+
+    // DIESE WOCHE (Mo–So um heute): was schon ausgegeben und was vom Wochen-Richtwert noch fehlt
+    const fmtD = d=>`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+    const dow = (now.getDay()+6)%7;                        // 0=Mo … 6=So
+    const monday = new Date(now); monday.setHours(0,0,0,0); monday.setDate(now.getDate()-dow);
+    const sunday = new Date(monday); sunday.setDate(monday.getDate()+6);
+    const weekStart = fmtD(monday), weekEnd = fmtD(sunday);
+    const volInWeek = (w)=>{
+      if(w.bestand) return 0;
+      const von = w.von, bis = w.bis || w.von;
+      if(!von || !bis) return 0;
+      const oStart = von > weekStart ? von : weekStart;
+      const oEnd   = bis < weekEnd   ? bis : weekEnd;
+      if(oStart > oEnd) return 0;
+      const totalDays   = Math.max(1, Math.round((new Date(bis)-new Date(von))/86400000)+1);
+      const overlapDays = Math.round((new Date(oEnd)-new Date(oStart))/86400000)+1;
+      return (w.vol||0) * overlapDays / totalDays;
+    };
+    let istVolWoche = 0;
+    (wochen||[]).forEach(w=>{ istVolWoche += volInWeek(w); });
+    const wocheNochVol  = Math.max(0, sollWocheFix - istVolWoche);
+    const wocheAufKurs  = sollWocheFix>0 && istVolWoche >= sollWocheFix;
 
     if(zielVol>0 || zielAsins>0) {
-      grid.innerHTML=[
-        {lbl:'Nötig pro Tag (Volumen)',   val:fmtE(sollTagVol),   sub:`noch ${remDays} Tage`},
-        {lbl:'Nötig pro Woche (Volumen)', val:fmtE(sollWocheVol), sub:`um ${fmtE(zielVol)} zu erreichen`},
-        {lbl:'Nötig pro Tag (ASINs)',     val:Math.ceil(sollTagAsins)+'', sub:`noch ${restAsins.toLocaleString('de-DE')} ASINs`},
-        {lbl:'Bereits erreicht',          val:fmtE(istVol), sub:`${istAsins.toLocaleString('de-DE')} ASINs`},
-      ].map(x=>`<div class="stat-box"><div class="lbl">${x.lbl}</div><div class="val" style="font-size:18px">${x.val}</div>${x.sub?`<div style="font-size:11px;color:var(--muted)">${x.sub}</div>`:''}</div>`).join('');
+      const box = x=>`<div class="stat-box"><div class="lbl">${x.lbl}</div><div class="val" style="font-size:18px">${x.val}</div>${x.sub?`<div style="font-size:11px;color:var(--muted)">${x.sub}</div>`:''}</div>`;
+      const section = (title, boxes)=>`<div style="font-size:11px;letter-spacing:.04em;text-transform:uppercase;color:var(--hint);margin:.15rem 0 .5rem">${title}</div><div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin-bottom:.9rem">${boxes.map(box).join('')}</div>`;
+      const zielErreicht = restVol<=0;
+      grid.innerHTML =
+        section('Fester Plan \u2013 gleichm\u00e4\u00dfiges Tempo', [
+          {lbl:'Soll pro Tag (fix)',   val:fmtE(Math.round(sollTagFix)),   sub:'\u00e4ndert sich nie'},
+          {lbl:'Soll pro Woche (fix)', val:fmtE(Math.round(sollWocheFix)), sub:'fester Richtwert'},
+        ]) +
+        section('Dynamisch \u2013 passt sich an die Restzeit an', [
+          {lbl:'Rest pro Tag',   val:zielErreicht?'\u2713 erreicht':fmtE(Math.round(restDynTag)),   sub:`noch ${remDays} Tage`},
+          {lbl:'Rest pro Woche', val:zielErreicht?'\u2713 erreicht':fmtE(Math.round(restDynWoche)), sub:`Tagesrate \u00d7 7 \u00b7 ~${remWeeks} Wo. \u00fcbrig`},
+          {lbl:'Heute noch n\u00f6tig', val:aufKurs?'\u2713 auf Kurs':fmtE(Math.round(heuteNochVol)), sub:aufKurs?`Monat schon: ${fmtE(Math.round(istVol))}`:'um auf Kurs zu sein'},
+          {lbl:'Diese Woche noch', val:wocheAufKurs?'\u2713 erreicht':fmtE(Math.round(wocheNochVol)), sub:`Woche schon: ${fmtE(Math.round(istVolWoche))}`},
+        ]) +
+        section('Fortschritt', [
+          {lbl:'Bereits erreicht (Monat)', val:fmtE(istVol), sub:`${istAsins.toLocaleString('de-DE')} ASINs`},
+          {lbl:'Soll pro Tag (ASINs)', val:Math.ceil(sollTagAsinsFix)+'', sub:`noch ${restAsins.toLocaleString('de-DE')} ASINs`},
+        ]);
     } else {
-      grid.innerHTML=`<div style="grid-column:1/-1;color:var(--muted);font-size:13px;padding:.5rem">Setze oben ein Monatsziel um zu sehen was du pro Tag/Woche brauchst.</div>`;
+      grid.innerHTML=`<div style="color:var(--muted);font-size:13px;padding:.5rem">Setze oben ein Monatsziel um zu sehen was du pro Tag/Woche brauchst.</div>`;
     }
   } else if(wrap) wrap.style.display='none';
 
