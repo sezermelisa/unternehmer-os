@@ -1138,7 +1138,7 @@ textarea{resize:vertical;line-height:1.6}
         <div id="tr-wochenziel-wrap" style="margin-bottom:1rem;display:none">
           <div class="card" style="border-color:var(--border2)">
             <div class="card-title">Was du noch brauchst – um dein Monatsziel zu erreichen</div>
-            <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px" id="tr-wochenziel-grid"></div>
+            <div id="tr-wochenziel-grid"></div>
           </div>
         </div>
 
@@ -1288,6 +1288,13 @@ textarea{resize:vertical;line-height:1.6}
           </div>
           <div id="ek-preview" style="font-size:12px;color:var(--muted);min-height:16px"></div>
           <div id="ek-edit-hint" style="display:none;font-size:12px;color:var(--muted);margin-top:4px">✏️ Bearbeitung aktiv – <span style="cursor:pointer;text-decoration:underline" onclick="cancelEkEdit()">Abbrechen</span></div>
+          <div style="display:flex;gap:8px;align-items:flex-end;margin-top:.75rem;padding-top:.75rem;border-top:1px solid var(--border)">
+            <div style="flex:1;min-width:140px">
+              <label class="sl-label">Schnell-Import heute (Volumen ; ASINs)</label>
+              <input type="text" id="ek-import-input" placeholder="z.B. 8151.81 ; 21" onkeydown="if(event.key==='Enter')ekSchnellImport()">
+            </div>
+            <button class="btn" onclick="ekSchnellImport()">Heute importieren</button>
+          </div>
         </div>
 
         <!-- DURCHSCHNITT & ZIEL STATUS -->
@@ -3956,20 +3963,52 @@ function renderTrUmsatz() {
 
     const lastDay = new Date(now.getFullYear(), now.getMonth()+1, 0).getDate();
     const remDays = Math.max(1, lastDay - now.getDate() + 1);
+    const dayOfMonth = now.getDate();
+    const remWeeks = Math.max(1, Math.ceil(remDays/7));
     const restU = Math.max(0, zielU - istU);
     const restG = Math.max(0, zielG - istG);
-    const sollTagU = restU / remDays;
-    const sollTagG = restG / remDays;
+
+    // FESTER Anker (gleichmäßiges Tempo, ändert sich nie)
+    const sollTagFixU = zielU>0 ? zielU/lastDay : 0;
+    const sollWocheFixU = sollTagFixU*7;
+    const sollTagFixG = zielG>0 ? zielG/lastDay : 0;
+    // DYNAMISCH (Rest auf verbleibende Zeit)
+    const restDynTagU = restU/remDays, restDynWocheU = restDynTagU*7;
+    // Heute noch nötig (kumulative Ideallinie)
+    const heuteNochU = Math.max(0, sollTagFixU*dayOfMonth - istU);
+    const aufKursU = sollTagFixU>0 && istU >= sollTagFixU*dayOfMonth;
+    // Diese Woche (Mo–So): bereits erzielter Umsatz
+    const fmtD = d=>`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+    const dow=(now.getDay()+6)%7;
+    const monday=new Date(now); monday.setHours(0,0,0,0); monday.setDate(now.getDate()-dow);
+    const sunday=new Date(monday); sunday.setDate(monday.getDate()+6);
+    const weekStart=fmtD(monday), weekEnd=fmtD(sunday);
+    const uInWeek = w => { const von=w.von, bis=w.bis||w.von; if(!von||!bis) return 0; const oS=von>weekStart?von:weekStart, oE=bis<weekEnd?bis:weekEnd; if(oS>oE) return 0; const tot=Math.max(1,Math.round((new Date(bis)-new Date(von))/86400000)+1); const ov=Math.round((new Date(oE)-new Date(oS))/86400000)+1; return (w.umsatz||0)*ov/tot; };
+    let istUWoche=0; (wochen||[]).forEach(w=>{ istUWoche+=uInWeek(w); });
+    const wocheNochU = Math.max(0, sollWocheFixU - istUWoche);
+    const wocheAufKursU = sollWocheFixU>0 && istUWoche >= sollWocheFixU;
+    const zielErreichtU = zielU>0 && restU<=0;
 
     if(zielU>0 || zielG>0) {
-      grid.innerHTML=[
-        {lbl:'Nötig pro Tag (Umsatz)',   val:fmtE(sollTagU),     sub:`noch ${remDays} Tage`},
-        {lbl:'Nötig pro Woche (Umsatz)', val:fmtE(sollTagU*7),   sub:`um ${fmtE(zielU)} zu erreichen`},
-        {lbl:'Nötig pro Tag (Gewinn)',   val:fmtE(sollTagG),     sub:zielG>0?`Ziel: ${fmtE(zielG)}`:''},
-        {lbl:'Bereits erreicht',         val:fmtE(istU),         sub:`Gewinn: ${fmtE(istG)}`},
-      ].map(x=>`<div class="stat-box"><div class="lbl">${x.lbl}</div><div class="val" style="font-size:18px">${x.val}</div>${x.sub?`<div style="font-size:11px;color:var(--muted)">${x.sub}</div>`:''}</div>`).join('');
+      const box = x=>`<div class="stat-box"><div class="lbl">${x.lbl}</div><div class="val" style="font-size:18px">${x.val}</div>${x.sub?`<div style="font-size:11px;color:var(--muted)">${x.sub}</div>`:''}</div>`;
+      const section = (title, boxes)=>`<div style="font-size:11px;letter-spacing:.04em;text-transform:uppercase;color:var(--hint);margin:.15rem 0 .5rem">${title}</div><div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin-bottom:.9rem">${boxes.map(box).join('')}</div>`;
+      grid.innerHTML =
+        section('Fester Plan \u2013 gleichm\u00e4\u00dfiges Tempo', [
+          {lbl:'Soll/Tag Umsatz (fix)',   val:fmtE(Math.round(sollTagFixU)),   sub:'\u00e4ndert sich nie'},
+          {lbl:'Soll/Woche Umsatz (fix)', val:fmtE(Math.round(sollWocheFixU)), sub:'fester Richtwert'},
+        ]) +
+        section('Dynamisch \u2013 passt sich an die Restzeit an', [
+          {lbl:'Rest/Tag Umsatz',   val:zielErreichtU?'\u2713 erreicht':fmtE(Math.round(restDynTagU)),   sub:`noch ${remDays} Tage`},
+          {lbl:'Rest/Woche Umsatz', val:zielErreichtU?'\u2713 erreicht':fmtE(Math.round(restDynWocheU)), sub:`Tagesrate \u00d7 7 \u00b7 ~${remWeeks} Wo. \u00fcbrig`},
+          {lbl:'Heute noch n\u00f6tig', val:aufKursU?'\u2713 auf Kurs':fmtE(Math.round(heuteNochU)), sub:aufKursU?`Monat: ${fmtE(Math.round(istU))}`:'um auf Kurs zu sein'},
+          {lbl:'Diese Woche noch',  val:wocheAufKursU?'\u2713 erreicht':fmtE(Math.round(wocheNochU)), sub:`Woche schon: ${fmtE(Math.round(istUWoche))}`},
+        ]) +
+        section('Fortschritt', [
+          {lbl:'Umsatz erreicht (Monat)', val:fmtE(istU), sub:zielU>0?`von ${fmtE(zielU)}`:''},
+          {lbl:'Gewinn erreicht (Monat)', val:fmtE(istG), sub:zielG>0?`Soll/Tag fix: ${fmtE(Math.round(sollTagFixG))}`:''},
+        ]);
     } else {
-      grid.innerHTML=`<div style="grid-column:1/-1;color:var(--muted);font-size:13px;padding:.5rem">Setze oben ein Monatsziel um zu sehen was du pro Tag/Woche brauchst.</div>`;
+      grid.innerHTML=`<div style="color:var(--muted);font-size:13px;padding:.5rem">Setze oben ein Monatsziel um zu sehen was du pro Tag/Woche brauchst.</div>`;
     }
   } else if(wrap) wrap.style.display='none';
 
@@ -4257,6 +4296,57 @@ function delEkWoche(id) {
   // Force full recalculation of all displays
   renderEkVerlauf();
   renderEkMonat();
+}
+
+// ─── AUTO-IMPORT (z.B. ArbitrageOne) ──────────────────────────────
+// Legt den heutigen Einkauf-Eintrag an oder überschreibt ihn (immer aktueller Stand).
+function quickImportEinkaufHeute(vol, asins) {
+  vol = parseFloat(vol); asins = parseInt(asins)||0;
+  if(isNaN(vol)||vol<=0){ notify('⚠️ Import: ungültiges Einkaufsvolumen'); return false; }
+  const now = new Date();
+  const today = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}-${String(now.getDate()).padStart(2,'0')}`;
+  const splits = ekSplitByMonth(new Date(today), new Date(today), vol);
+  const monat = splits[0]?.monat || (now.getMonth()+1);
+  const jahr  = splits[0]?.jahr  || now.getFullYear();
+  if(!S.einkauf) S.einkauf = {};
+  if(!S.einkauf.wochen) S.einkauf.wochen = [];
+  // Bereits ein Auto-Import für heute? -> überschreiben statt doppeln
+  let w = S.einkauf.wochen.find(x=>!x.bestand && x.von===today && x.bis===today && x.src==='arbitrageone');
+  if(w){
+    w.vol=vol; w.asins=asins; w.splits=splits; w.monat=monat; w.jahr=jahr; w.ts=Date.now();
+  } else {
+    w={id:uid(), von:today, bis:today, kw:'', vol, asins, notiz:'Auto-Import ArbitrageOne', splits, monat, jahr, src:'arbitrageone', ts:Date.now()};
+    S.einkauf.wochen.push(w);
+  }
+  save();
+  if(typeof renderEkVerlauf==='function') renderEkVerlauf();
+  if(typeof renderEkMonat==='function')   renderEkMonat();
+  notify(`✅ Heute importiert: ${fmtE(vol)} · ${asins} ASINs`);
+  return true;
+}
+
+// Manuelles Einfügen aus dem Schnell-Import-Feld: "8151.81;21" oder "8.151,81 € | 21 ASINs"
+function ekSchnellImport() {
+  const el = document.getElementById('ek-import-input');
+  const raw = (el?.value||'').trim();
+  if(!raw){ notify('Bitte Werte einfügen, z.B. 8151.81;21'); return; }
+  const nums = raw.match(/-?[\d.,]+/g)||[];
+  const toNum = s=>parseFloat(String(s).replace(/\./g,'').replace(',', '.'));
+  const vol   = nums[0]!=null ? toNum(nums[0]) : NaN;
+  const asins = nums[1]!=null ? parseInt(String(nums[1]).replace(/[^\d]/g,'')) : 0;
+  if(quickImportEinkaufHeute(vol, asins) && el) el.value='';
+}
+
+// Deep-Link Empfänger: #import=VOLUMEN;ASINS  (vom ArbitrageOne-Skript geöffnet)
+function handleEinkaufImportHash() {
+  try{
+    const m = (location.hash||'').match(/[#&]import=([^&]+)/);
+    if(!m) return;
+    const parts = decodeURIComponent(m[1]).split(/[;,|]/);
+    quickImportEinkaufHeute(parts[0], parts[1]||0);
+    // Hash entfernen, damit ein Reload nicht erneut importiert
+    history.replaceState(null, '', location.pathname + location.search);
+  }catch(e){ console.warn('Import-Hash Fehler:', e); }
 }
 
 function getEntryVolForMonth(w, mk) {
@@ -5258,6 +5348,7 @@ function restoreTimerIfRunning() {
     updateSyncStatus('synced');
   }
   restoreTimerIfRunning();
+  handleEinkaufImportHash();
 })();
 </script>
 </body>
